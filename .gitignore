@@ -9,7 +9,7 @@ cluster_sbatch.sh
 __pycache__/
 *.py[cod]
 *$py.class
-
+trained_agents/
 # C extensions
 *.so
 

@@ -45,50 +45,51 @@ def smooth(xy, window=50):
     x = x[len(x) - len(y):]
     return x, y
 
-# Init seaborn
-seaborn.set()
+if __name__ == '__main__':
+    # Init seaborn
+    seaborn.set()
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-i', '--log-dirs', help='Log folder(s)', nargs='+', required=True, type=str)
-parser.add_argument('--title', help='Plot title', default='Learning Curve', type=str)
-parser.add_argument('--smooth', action='store_true', default=False,
-                    help='Smooth Learning Curve')
-args = parser.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--log-dirs', help='Log folder(s)', nargs='+', required=True, type=str)
+    parser.add_argument('--title', help='Plot title', default='Learning Curve', type=str)
+    parser.add_argument('--smooth', action='store_true', default=False,
+                        help='Smooth Learning Curve')
+    args = parser.parse_args()
 
-results = []
-algos = []
+    results = []
+    algos = []
 
-for folder in args.log_dirs:
-    timesteps = load_results(folder)
-    results.append(timesteps)
-    if folder.endswith('/'):
-        folder = folder[:-1]
-    algos.append(folder.split('/')[-1])
+    for folder in args.log_dirs:
+        timesteps = load_results(folder)
+        results.append(timesteps)
+        if folder.endswith('/'):
+            folder = folder[:-1]
+        algos.append(folder.split('/')[-1])
 
-min_timesteps = np.inf
+    min_timesteps = np.inf
 
-# 'walltime_hrs', 'episodes'
-for plot_type in ['timesteps']:
-    xy_list = []
-    for result in results:
-        x, y = ts2xy(result, plot_type)
-        if args.smooth:
-            x, y = smooth((x, y), window=50)
-        n_timesteps = x[-1]
-        if n_timesteps < min_timesteps:
-            min_timesteps = n_timesteps
-        xy_list.append((x, y))
+    # 'walltime_hrs', 'episodes'
+    for plot_type in ['timesteps']:
+        xy_list = []
+        for result in results:
+            x, y = ts2xy(result, plot_type)
+            if args.smooth:
+                x, y = smooth((x, y), window=50)
+            n_timesteps = x[-1]
+            if n_timesteps < min_timesteps:
+                min_timesteps = n_timesteps
+            xy_list.append((x, y))
 
-    fig = plt.figure(args.title)
-    for i, (x, y) in enumerate(xy_list):
-        print(algos[i])
-        plt.plot(x[:min_timesteps], y[:min_timesteps], label=algos[i], linewidth=2)
-    plt.title(args.title)
-    plt.legend()
-    if plot_type == 'timesteps':
-        if min_timesteps > 1e6:
-            formatter = FuncFormatter(millions)
-            plt.xlabel('Number of Timesteps')
-            fig.axes[0].xaxis.set_major_formatter(formatter)
+        fig = plt.figure(args.title)
+        for i, (x, y) in enumerate(xy_list):
+            print(algos[i])
+            plt.plot(x[:min_timesteps], y[:min_timesteps], label=algos[i], linewidth=2)
+        plt.title(args.title)
+        plt.legend()
+        if plot_type == 'timesteps':
+            if min_timesteps > 1e6:
+                formatter = FuncFormatter(millions)
+                plt.xlabel('Number of Timesteps')
+                fig.axes[0].xaxis.set_major_formatter(formatter)
 
-plt.show()
+    plt.show()
