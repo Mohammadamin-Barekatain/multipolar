@@ -1,3 +1,10 @@
+"""train an agent for OpenAI gym environments
+Author: Mohammadamin Barekatain
+Affiliation: TUM & OSX
+
+Parts of this script has been copied from https://github.com/araffin/rl-baselines-zoo
+"""
+
 import argparse
 import difflib
 import os
@@ -13,22 +20,22 @@ from stable_baselines.common.vec_env import VecFrameStack, SubprocVecEnv, VecNor
 from stable_baselines.ddpg import AdaptiveParamNoiseSpec, NormalActionNoise, OrnsteinUhlenbeckActionNoise
 from stable_baselines.ppo2.ppo2 import constfn
 from stable_baselines.bench import Monitor
-
 from utils import make_env, ALGOS, linear_schedule, get_latest_run_id
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--env', type=str, default="CartPole-v1", help='environment ID')
-parser.add_argument('-i', '--trained-agent', help='Path to a pretrained agent to continue training',
-                    default='', type=str)
 parser.add_argument('--algo', help='RL Algorithm', default='ppo2', type=str, required=False, choices=list(ALGOS.keys()))
 parser.add_argument('-n', '--n-timesteps', help='Overwrite the number of timesteps', default=-1, type=int)
+parser.add_argument('--seed', help='Random generator seed', type=int, default=0)
+parser.add_argument('--trained-agent', help='Path to a pretrained agent to continue training', default='', type=str)
+parser.add_argument('--exp-name',  help='(optional) experiment name, DO NOT USE _', type=str, default=None)
+
 parser.add_argument('--log-interval', help='Override log interval (default: -1, no change)', default=-1, type=int)
 parser.add_argument('-f', '--log-folder', help='Log folder', type=str, default='logs')
-parser.add_argument('--seed', help='Random generator seed', type=int, default=0)
 parser.add_argument('--no-monitor', help='do not monitor training', action='store_true', default=False)
 parser.add_argument('--no-tensorboard', help='do not create tensorboard', action='store_true', default=False)
-parser.add_argument('--exp_name',  help='(optional) experiment name', type=str, default=None)
 # ToDo: get path for loading a spesific hyperparams.
+# ToDo: add option for wrapping the env with VecVideo Record from OpenAI or Stable Baseline
 args = parser.parse_args()
 
 if args.trained_agent != "":
@@ -43,6 +50,8 @@ if env_id not in registered_envs:
     closest_match = difflib.get_close_matches(env_id, registered_envs, n=1)[0]
     raise ValueError('{} not found in gym registry, you maybe meant {}?'.format(env_id, closest_match))
 
+if args.exp_name:
+    assert (not ('_' in args.exp_name)), 'experiment name should not include _'
 
 log_path = "{}/{}/".format(args.log_folder, args.algo)
 if args.exp_name:
