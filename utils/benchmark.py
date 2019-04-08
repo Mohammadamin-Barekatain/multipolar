@@ -19,12 +19,9 @@ from utils import get_trained_models
 parser = argparse.ArgumentParser()
 parser.add_argument('--log-dir', help='Root log folder', default='trained_agents/', type=str)
 parser.add_argument('--benchmark-dir', help='Benchmark log folder', default='logs/benchmark/', type=str)
-parser.add_argument('-n', '--n-timesteps', help='number of timesteps', default=150000,
-                    type=int)
-parser.add_argument('--n-envs', help='number of environments', default=1,
-                    type=int)
-parser.add_argument('--verbose', help='Verbose mode (0: no output, 1: INFO)', default=1,
-                    type=int)
+parser.add_argument('-n', '--n-timesteps', help='number of timesteps', default=150000, type=int)
+parser.add_argument('--n-envs', help='number of environments', default=1, type=int)
+parser.add_argument('--verbose', help='Verbose mode (0: no output, 1: INFO)', default=1, type=int)
 parser.add_argument('--seed', help='Random generator seed', type=int, default=0)
 parser.add_argument('--test-mode', action='store_true', default=False,
                     help='Do only one experiments (useful for testing)')

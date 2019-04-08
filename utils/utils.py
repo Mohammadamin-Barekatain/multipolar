@@ -1,11 +1,20 @@
+""" Utility functions.
+Author: Mohammadamin Barekatain
+Affiliation: TUM & OSX
+
+some functions has been copied from: https://github.com/openai/baselines and https://github.com/araffin/rl-baselines-zoo
+"""
+
 import time
 import os
 import inspect
 import glob
 import yaml
-
+import pandas
+import os.path as osp
 import gym
-import pybullet_envs
+from collections import namedtuple
+
 from gym.envs.registration import load
 from stable_baselines.deepq.policies import FeedForwardPolicy
 from stable_baselines.common.policies import FeedForwardPolicy as BasePolicy
@@ -13,6 +22,7 @@ from stable_baselines.common.policies import register_policy
 from stable_baselines.bench import Monitor
 from stable_baselines import logger
 from stable_baselines import PPO2, A2C, ACER, ACKTR, DQN, DDPG
+from stable_baselines.results_plotter import load_results, ts2xy
 
 # Temp fix until SAC is integrated into stable_baselines
 try:
@@ -256,3 +266,65 @@ def get_saved_hyperparams(stats_path, norm_reward=False, test_mode=False):
                 normalize_kwargs = {'norm_obs': hyperparams['normalize'], 'norm_reward': norm_reward}
             hyperparams['normalize_kwargs'] = normalize_kwargs
     return hyperparams, stats_path
+
+
+
+
+
+Result_obj = namedtuple('Result', 'monitor dirname')
+Result_obj.__new__.__defaults__ = (None,) * len(Result_obj._fields)
+
+def load_group_results(root_dir_or_dirs, env='', verbose=False):
+    '''
+    load summaries of runs from a list of directories (including subdirectories)
+    Arguments:
+    verbose: bool - if True, will print out list of directories from which the data is loaded. Default: False
+    env: if provided, only results of the corresponding env would be loaded.
+    Returns:
+    List of Result objects with the following fields:
+         - dirname - path to the directory data was loaded from
+         - monitor - if enable_monitor is True, this field contains pandas dataframe with loaded monitor.csv file
+         (or aggregate of all *.monitor.csv files in the directory)
+    '''
+    import re
+    if isinstance(root_dir_or_dirs, str):
+        rootdirs = [osp.expanduser(root_dir_or_dirs)]
+    else:
+        rootdirs = [osp.expanduser(d) for d in root_dir_or_dirs]
+    allresults = []
+    for rootdir in rootdirs:
+        assert osp.exists(rootdir), "%s doesn't exist"%rootdir
+        for dirname, dirs, files in os.walk(rootdir):
+            if '-proc' in dirname:
+                files[:] = []
+                continue
+            monitor_re = re.compile(r'(\d+\.)?(\d+\.)?monitor\.csv')
+            if set(['monitor.json']).intersection(files) or \
+               any([f for f in files if monitor_re.match(f)]):  # also match monitor files like 0.1.monitor.csv
+                # used to be uncommented, which means do not go deeper than current directory if any of the data files
+                # are found
+                # dirs[:] = []
+                result = {'dirname': dirname}
+
+                try:
+                    if not dirname.split('/')[-1].startswith(env):
+                        continue
+                    data = load_results(dirname)
+                    if len(data) < 2:
+                        print('empty dir ', dirname)
+                        continue
+                    result['monitor'] = pandas.DataFrame(load_results(dirname))
+                # except Monitor.LoadMonitorResultsError:
+                #     print('skipping %s: no monitor files' % dirname)
+                except Exception as e:
+                    print('exception loading monitor file in %s: %s' % (dirname, e))
+
+                if result.get('monitor') is not None:
+                    allresults.append(Result_obj(**result))
+                    if verbose:
+                        print('successfully loaded %s' % dirname)
+
+    if verbose:
+        print('loaded %i results' % len(allresults))
+    return allresults
+

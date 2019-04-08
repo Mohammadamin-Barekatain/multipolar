@@ -1,303 +1,70 @@
-import argparse
-import os
-import os.path as osp
+"""functions for plotting
+Author: Mohammadamin Barekatain
+Affiliation: TUM & OSX
 
+Parts of this script has been copied from https://github.com/araffin/rl-baselines-zoo
+"""
+
+import argparse
 import seaborn
-import pandas
 import numpy as np
+import utils.plot_utils as plt_util
 import matplotlib.pyplot as plt
-from collections import defaultdict, namedtuple
+import matplotlib.ticker as plticker
+
+from collections import defaultdict
 from matplotlib.ticker import FuncFormatter
 from stable_baselines.results_plotter import ts2xy
-from stable_baselines.bench import Monitor
 from stable_baselines.results_plotter import load_results
 
 
-COLORS = ['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black', 'purple', 'pink',
-        'brown', 'orange', 'teal',  'lightblue', 'lime', 'lavender', 'turquoise',
-        'darkgreen', 'tan', 'salmon', 'gold',  'darkred', 'darkblue']
-
-def millions(x, pos):
+def plot_results(allresults, split_fn=plt_util.default_split_fn, group_fn=plt_util.defalt_group_fn, xaxis='episodes',
+    average_group=False, shaded_std=True, shaded_err=True, figsize=None, legend_outside=False, resample=0,
+    smooth_step=1.0, title=None, xbase=None, ybase=None):
     """
-    Formatter for matplotlib
-    The two args are the value and tick position
-
-    :param x: (float)
-    :param pos: (int) tick position (not used here
-    :return: (str)
-    """
-    return '{:.1f}M'.format(x * 1e-6)
-
-def movingAverage(values, window):
-    """
-    Smooth values by doing a moving average
-
-    :param values: (numpy array)
-    :param window: (int)
-    :return: (numpy array)
-    """
-    weights = np.repeat(1.0, window) / window
-    return np.convolve(values, weights, 'valid')
-
-def smooth_movingAverage(xy, window=50):
-    x, y = xy
-    if y.shape[0] < window:
-        return x, y
-
-    original_y = y.copy()
-    y = movingAverage(y, window)
-
-    if len(y) == 0:
-        return x, original_y
-
-    # Truncate x
-    x = x[len(x) - len(y):]
-    return x, y
-
-
-def smooth(y, radius, mode='two_sided', valid_only=False):
-    '''
-    Smooth signal y, where radius is determines the size of the window
-    mode='twosided':
-        average over the window [max(index - radius, 0), min(index + radius, len(y)-1)]
-    mode='causal':
-        average over the window [max(index - radius, 0), index]
-    valid_only: put nan in entries where the full-sized window is not available
-    '''
-    assert mode in ('two_sided', 'causal')
-    if len(y) < 2*radius+1:
-        return np.ones_like(y) * y.mean()
-    elif mode == 'two_sided':
-        convkernel = np.ones(2 * radius+1)
-        out = np.convolve(y, convkernel,mode='same') / np.convolve(np.ones_like(y), convkernel, mode='same')
-        if valid_only:
-            out[:radius] = out[-radius:] = np.nan
-    elif mode == 'causal':
-        convkernel = np.ones(radius)
-        out = np.convolve(y, convkernel,mode='full') / np.convolve(np.ones_like(y), convkernel, mode='full')
-        out = out[:-radius+1]
-        if valid_only:
-            out[:radius] = np.nan
-    return out
-
-def one_sided_ema(xolds, yolds, low=None, high=None, n=512, decay_steps=1., low_counts_threshold=1e-8):
-    '''
-    perform one-sided (causal) EMA (exponential moving average)
-    smoothing and resampling to an even grid with n points.
-    Does not do extrapolation, so we assume
-    xolds[0] <= low && high <= xolds[-1]
-    Arguments:
-    xolds: array or list  - x values of data. Needs to be sorted in ascending order
-    yolds: array of list  - y values of data. Has to have the same length as xolds
-    low: float            - min value of the new x grid. By default equals to xolds[0]
-    high: float           - max value of the new x grid. By default equals to xolds[-1]
-    n: int                - number of points in new x grid
-    decay_steps: float    - EMA decay factor, expressed in new x grid steps.
-    low_counts_threshold: float or int
-                          - y values with counts less than this value will be set to NaN
-    Returns:
-        tuple sum_ys, count_ys where
-            xs        - array with new x grid
-            ys        - array of EMA of y at each point of the new x grid
-            count_ys  - array of EMA of y counts at each point of the new x grid
-    '''
-
-    low = xolds[0] if low is None else low
-    high = xolds[-1] if high is None else high
-
-    assert xolds[0] <= low, 'low = {} < xolds[0] = {} - extrapolation not permitted!'.format(low, xolds[0])
-    assert xolds[-1] >= high, 'high = {} > xolds[-1] = {}  - extrapolation not permitted!'.format(high, xolds[-1])
-    assert len(xolds) == len(yolds), 'length of xolds ({}) and yolds ({}) do not match!'.format(len(xolds), len(yolds))
-
-
-    xolds = xolds.astype('float64')
-    yolds = yolds.astype('float64')
-
-    luoi = 0 # last unused old index
-    sum_y = 0.
-    count_y = 0.
-    xnews = np.linspace(low, high, n)
-    decay_period = (high - low) / (n - 1) * decay_steps
-    interstep_decay = np.exp(- 1. / decay_steps)
-    sum_ys = np.zeros_like(xnews)
-    count_ys = np.zeros_like(xnews)
-    for i in range(n):
-        xnew = xnews[i]
-        sum_y *= interstep_decay
-        count_y *= interstep_decay
-        while True:
-            xold = xolds[luoi]
-            if xold <= xnew:
-                decay = np.exp(- (xnew - xold) / decay_period)
-                sum_y += decay * yolds[luoi]
-                count_y += decay
-                luoi += 1
-            else:
-                break
-            if luoi >= len(xolds):
-                break
-        sum_ys[i] = sum_y
-        count_ys[i] = count_y
-
-    ys = sum_ys / count_ys
-    ys[count_ys < low_counts_threshold] = np.nan
-
-    return xnews, ys, count_ys
-
-def symmetric_ema(xolds, yolds, low=None, high=None, n=512, decay_steps=1., low_counts_threshold=1e-8):
-    '''
-    perform symmetric EMA (exponential moving average)
-    smoothing and resampling to an even grid with n points.
-    Does not do extrapolation, so we assume
-    xolds[0] <= low && high <= xolds[-1]
-    Arguments:
-    xolds: array or list  - x values of data. Needs to be sorted in ascending order
-    yolds: array of list  - y values of data. Has to have the same length as xolds
-    low: float            - min value of the new x grid. By default equals to xolds[0]
-    high: float           - max value of the new x grid. By default equals to xolds[-1]
-    n: int                - number of points in new x grid
-    decay_steps: float    - EMA decay factor, expressed in new x grid steps.
-    low_counts_threshold: float or int
-                          - y values with counts less than this value will be set to NaN
-    Returns:
-        tuple sum_ys, count_ys where
-            xs        - array with new x grid
-            ys        - array of EMA of y at each point of the new x grid
-            count_ys  - array of EMA of y counts at each point of the new x grid
-    '''
-    xs, ys1, count_ys1 = one_sided_ema(xolds, yolds, low, high, n, decay_steps, low_counts_threshold=0)
-    _,  ys2, count_ys2 = one_sided_ema(-xolds[::-1], yolds[::-1], -high, -low, n, decay_steps, low_counts_threshold=0)
-    ys2 = ys2[::-1]
-    count_ys2 = count_ys2[::-1]
-    count_ys = count_ys1 + count_ys2
-    ys = (ys1 * count_ys1 + ys2 * count_ys2) / count_ys
-    ys[count_ys < low_counts_threshold] = np.nan
-    return xs, ys, count_ys
-
-Result_obj = namedtuple('Result', 'monitor dirname')
-Result_obj.__new__.__defaults__ = (None,) * len(Result_obj._fields)
-
-def load_group_results(root_dir_or_dirs, env='', verbose=False):
-    '''
-    load summaries of runs from a list of directories (including subdirectories)
-    Arguments:
-    verbose: bool - if True, will print out list of directories from which the data is loaded. Default: False
-    env: if provided, only results of the corresponding env would be loaded.
-    Returns:
-    List of Result objects with the following fields:
-         - dirname - path to the directory data was loaded from
-         - monitor - if enable_monitor is True, this field contains pandas dataframe with loaded monitor.csv file
-         (or aggregate of all *.monitor.csv files in the directory)
-    '''
-    import re
-    if isinstance(root_dir_or_dirs, str):
-        rootdirs = [osp.expanduser(root_dir_or_dirs)]
-    else:
-        rootdirs = [osp.expanduser(d) for d in root_dir_or_dirs]
-    allresults = []
-    for rootdir in rootdirs:
-        assert osp.exists(rootdir), "%s doesn't exist"%rootdir
-        for dirname, dirs, files in os.walk(rootdir):
-            if '-proc' in dirname:
-                files[:] = []
-                continue
-            monitor_re = re.compile(r'(\d+\.)?(\d+\.)?monitor\.csv')
-            if set(['monitor.json']).intersection(files) or \
-               any([f for f in files if monitor_re.match(f)]):  # also match monitor files like 0.1.monitor.csv
-                # used to be uncommented, which means do not go deeper than current directory if any of the data files
-                # are found
-                # dirs[:] = []
-                result = {'dirname': dirname}
-
-                try:
-                    if not dirname.split('/')[-1].startswith(env):
-                        continue
-                    data = load_results(dirname)
-                    if len(data) < 2:
-                        print('empty dir ', dirname)
-                        continue
-                    result['monitor'] = pandas.DataFrame(load_results(dirname))
-                # except Monitor.LoadMonitorResultsError:
-                #     print('skipping %s: no monitor files' % dirname)
-                except Exception as e:
-                    print('exception loading monitor file in %s: %s' % (dirname, e))
-
-                if result.get('monitor') is not None:
-                    allresults.append(Result_obj(**result))
-                    if verbose:
-                        print('successfully loaded %s' % dirname)
-
-    if verbose:
-        print('loaded %i results' % len(allresults))
-    return allresults
-
-def default_xy_fn(r):
-    x = np.cumsum(r.monitor.l)
-    y = smooth(r.monitor.r, radius=10)
-    return x,y
-
-def default_split_fn(r):
-    import re
-    # match name between slash and -<digits> at the end of the string
-    # (slash in the beginning or -<digits> in the end or either may be missing)
-    match = re.search(r'[^/-]+(?=(-\d+)?\Z)', r.dirname)
-    if match:
-        return match.group(0)
-
-def plot_results(
-    allresults,
-    xy_fn=default_xy_fn,
-    split_fn=default_split_fn,
-    group_fn=default_split_fn,
-    average_group=False,
-    shaded_std=True,
-    shaded_err=True,
-    figsize=None,
-    legend_outside=False,
-    resample=0,
-    smooth_step=1.0
-):
-    '''
     Plot multiple Results objects
-    xy_fn: function Result -> x,y           - function that converts results objects into tuple of x and y values.
-                                              By default, x is cumsum of episode lengths, and y is episode rewards
-    split_fn: function Result -> hashable   - function that converts results objects into keys to split curves into sub-panels by.
-                                              That is, the results r for which split_fn(r) is different will be put on different sub-panels.
-                                              By default, the portion of r.dirname between last / and -<digits> is returned. The sub-panels are
-                                              stacked vertically in the figure.
-    group_fn: function Result -> hashable   - function that converts results objects into keys to group curves by.
-                                              That is, the results r for which group_fn(r) is the same will be put into the same group.
-                                              Curves in the same group have the same color (if average_group is False), or averaged over
-                                              (if average_group is True). The default value is the same as default value for split_fn
-    average_group: bool                     - if True, will average the curves in the same group and plot the mean. Enables resampling
-                                              (if resample = 0, will use 512 steps)
-    shaded_std: bool                        - if True (default), the shaded region corresponding to standard deviation of the group of curves will be
-                                              shown (only applicable if average_group = True)
-    shaded_err: bool                        - if True (default), the shaded region corresponding to error in mean estimate of the group of curves
-                                              (that is, standard deviation divided by square root of number of curves) will be
-                                              shown (only applicable if average_group = True)
-    figsize: tuple or None                  - size of the resulting figure (including sub-panels). By default, width is 6 and height is 6 times number of
-                                              sub-panels.
-    legend_outside: bool                    - if True, will place the legend outside of the sub-panels.
-    resample: int                           - if not zero, size of the uniform grid in x direction to resample onto. Resampling is performed via symmetric
-                                              EMA smoothing (see the docstring for symmetric_ema).
-                                              Default is zero (no resampling). Note that if average_group is True, resampling is necessary; in that case, default
-                                              value is 512.
-    smooth_step: float                      - when resampling (i.e. when resample > 0 or average_group is True), use this EMA decay parameter (in units of the new grid step).
-                                              See docstrings for decay_steps in symmetric_ema or one_sided_ema functions.
-    '''
-
+    split_fn: function Result -> hashable, function that converts results objects into keys to split curves into
+        sub-panels by. That is, the results r for which split_fn(r) is different will be put on different sub-panels.
+        The sub-panels are stacked vertically in the figure.
+    group_fn: function Result -> hashable, function that converts results objects into keys to group curves by.
+        That is, the results r for which group_fn(r) is the same will be put into the same group.
+        Curves in the same group have the same color (if average_group is False), or averaged over
+        (if average_group is True). The default value is the same as default value for split_fn
+    xaxis: str, name for x axis of the plot. can be one of 'timesteps', 'episodes' and 'walltime_hrs'.
+    average_group: bool, if True, will average the curves in the same group and plot the mean. Enables resampling
+        (if resample = 0, will use 512 steps)
+    shaded_std: bool, if True (default), the shaded region corresponding to standard deviation of the group of curves
+        will be shown (only applicable if average_group = True)
+    shaded_err: bool, if True (default), the shaded region corresponding to error in mean estimate of the group of curves
+        (that is, standard deviation divided by square root of number of curves) will be shown
+        (only applicable if average_group = True)
+    figsize: tuple or None, size of the resulting figure (including sub-panels). By default, width is 11.7 and height
+        is 8.27 times number of sub-panels.
+    legend_outside: bool, if True, will place the legend outside of the sub-panels.
+    resample: int, if not zero, size of the uniform grid in x direction to resample onto.
+        Resampling is performed via symmetric EMA smoothing (see the docstring for symmetric_ema). Default is zero
+        (no resampling). Note that if average_group is True, resampling is necessary; in that case, default value is 512.
+    smooth_step: float, when resampling (i.e. when resample > 0 or average_group is True), use this EMA decay parameter
+        (in units of the new grid step). See docstrings for decay_steps in symmetric_ema or one_sided_ema functions.
+    title: str, optional title for the plots
+    xbase: int, regular intervals to put ticks on x axis
+    ybase: int, regular intervals to put ticks on y axis
+    """
+    seaborn.set(style="darkgrid", font_scale=1.5)
     if split_fn is None: split_fn = lambda _ : ''
     if group_fn is None: group_fn = lambda _ : ''
-    sk2r = defaultdict(list) # splitkey2results
+
+    # splitkey2results
+    sk2r = defaultdict(list)
     for result in allresults:
         splitkey = split_fn(result)
         sk2r[splitkey].append(result)
+
     assert len(sk2r) > 0
     assert isinstance(resample, int), "0: don't resample. <integer>: that many samples"
     nrows = len(sk2r)
     ncols = 1
-    figsize = figsize or (6, 6 * nrows)
+    figsize = figsize or (11.7, 8.27 * nrows)
     f, axarr = plt.subplots(nrows, ncols, sharex=False, squeeze=False, figsize=figsize)
 
     groups = list(set(group_fn(result) for result in allresults))
@@ -315,22 +82,22 @@ def plot_results(
         for result in sresults:
             group = group_fn(result)
             g2c[group] += 1
-            x, y = xy_fn(result)
+            x, y = ts2xy(result.monitor, xaxis)
             if x is None: x = np.arange(len(y))
             x, y = map(np.asarray, (x, y))
             if average_group:
                 gresults[group].append((x,y))
             else:
                 if resample:
-                    x, y, counts = symmetric_ema(x, y, x[0], x[-1], resample, decay_steps=smooth_step)
-                l, = ax.plot(x, y, color=COLORS[groups.index(group) % len(COLORS)])
+                    x, y, counts = plt_util.symmetric_ema(x, y, x[0], x[-1], resample, decay_steps=smooth_step)
+                l, = ax.plot(x, y, color=plt_util.COLORS[groups.index(group) % len(plt_util.COLORS)])
                 g2l[group] = l
         if average_group:
             for group in sorted(groups):
                 xys = gresults[group]
                 if not any(xys):
                     continue
-                color = COLORS[groups.index(group) % len(COLORS)]
+                color = plt_util.COLORS[groups.index(group) % len(plt_util.COLORS)]
                 origxs = [xy[0] for xy in xys]
                 minxlen = min(map(len, origxs))
                 def allequal(qs):
@@ -341,7 +108,7 @@ def plot_results(
                     usex = np.linspace(low, high, resample)
                     ys = []
                     for (x, y) in xys:
-                        ys.append(symmetric_ema(x, y, low, high, resample, decay_steps=smooth_step)[1])
+                        ys.append(plt_util.symmetric_ema(x, y, low, high, resample, decay_steps=smooth_step)[1])
                 else:
                     assert allequal([x[:minxlen] for x in origxs]),\
                         'If you want to average unevenly sampled data, set resample=<number of samples you want>'
@@ -355,7 +122,7 @@ def plot_results(
                 if shaded_err:
                     ax.fill_between(usex, ymean - ystderr, ymean + ystderr, color=color, alpha=.4)
                 if shaded_std:
-                    ax.fill_between(usex, ymean - ystd,    ymean + ystd,    color=color, alpha=.2)
+                    ax.fill_between(usex, ymean - ystd, ymean + ystd, color=color, alpha=.2)
 
 
         # https://matplotlib.org/users/legend_guide.html
@@ -365,36 +132,21 @@ def plot_results(
                 g2l.values(),
                 ['%s (%i)'%(g, g2c[g]) for g in g2l] if average_group else g2l.keys(),
                 loc=2 if legend_outside else None,
-                bbox_to_anchor=(1,1) if legend_outside else None)
-        ax.set_title(sk)
+                bbox_to_anchor=(1, 1) if legend_outside else None)
+        ax.set_xlabel(xaxis)
+        ax.set_ylabel('reward')
+        if title is None:
+            ax.set_title(sk)
+        else:
+            ax.set_title(title)
+        if xbase:
+            loc = plticker.MultipleLocator(base=xbase)
+            ax.xaxis.set_major_locator(loc)
+        if ybase:
+            loc = plticker.MultipleLocator(base=ybase)
+            ax.yaxis.set_major_locator(loc)
     return f, axarr
 
-def regression_analysis(df):
-    xcols = list(df.columns.copy())
-    xcols.remove('score')
-    ycols = ['score']
-    import statsmodels.api as sm
-    mod = sm.OLS(df[ycols], sm.add_constant(df[xcols]), hasconst=False)
-    res = mod.fit()
-    print(res.summary())
-
-def test_smooth():
-    norig = 100
-    nup = 300
-    ndown = 30
-    xs = np.cumsum(np.random.rand(norig) * 10 / norig)
-    yclean = np.sin(xs)
-    ys = yclean + .1 * np.random.randn(yclean.size)
-    xup, yup, _ = symmetric_ema(xs, ys, xs.min(), xs.max(), nup, decay_steps=nup/ndown)
-    xdown, ydown, _ = symmetric_ema(xs, ys, xs.min(), xs.max(), ndown, decay_steps=ndown/ndown)
-    xsame, ysame, _ = symmetric_ema(xs, ys, xs.min(), xs.max(), norig, decay_steps=norig/ndown)
-    plt.plot(xs, ys, label='orig', marker='x')
-    plt.plot(xup, yup, label='up', marker='x')
-    plt.plot(xdown, ydown, label='down', marker='x')
-    plt.plot(xsame, ysame, label='same', marker='x')
-    plt.plot(xs, yclean, label='clean', marker='x')
-    plt.legend()
-    plt.show()
 
 if __name__ == '__main__':
     # Init seaborn
@@ -425,7 +177,7 @@ if __name__ == '__main__':
         for result in results:
             x, y = ts2xy(result, plot_type)
             if args.smooth:
-                x, y = smooth((x, y), window=50)
+                x, y = plt_util.smooth((x, y), window=50)
             n_timesteps = x[-1]
             if n_timesteps < min_timesteps:
                 min_timesteps = n_timesteps
@@ -439,7 +191,7 @@ if __name__ == '__main__':
         plt.legend()
         if plot_type == 'timesteps':
             if min_timesteps > 1e6:
-                formatter = FuncFormatter(millions)
+                formatter = FuncFormatter(plt_util.millions)
                 plt.xlabel('Number of Timesteps')
                 fig.axes[0].xaxis.set_major_formatter(formatter)
 
