@@ -4,7 +4,8 @@ Affiliation: TUM & OSX
 
 Parts of this script has been copied from https://github.com/araffin/rl-baselines-zoo
 """
-
+import matplotlib
+matplotlib.use('Agg')
 import argparse
 import seaborn
 import numpy as np

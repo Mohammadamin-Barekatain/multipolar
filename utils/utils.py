@@ -217,7 +217,7 @@ def get_trained_models(log_folder):
     return trained_models
 
 
-def get_latest_run_id(log_path, env_id):
+def get_latest_run_id(log_path, env_id, exp_name=None):
     """
     Returns the latest run number for the given log name and log path,
     by finding the greatest number in the directories.
@@ -227,11 +227,17 @@ def get_latest_run_id(log_path, env_id):
     :return: (int) latest run number
     """
     max_run_id = 0
-    for path in glob.glob(log_path + "/{}_[0-9]*".format(env_id)):
+    if exp_name:
+        loc = log_path + "/{}_{}_[0-9]*".format(env_id, exp_name)
+    else:
+        loc = log_path + "/{}_[0-9]*".format(env_id)
+
+    for path in glob.glob(loc):
         file_name = path.split("/")[-1]
         ext = file_name.split("_")[-1]
-        if env_id == "_".join(file_name.split("_")[:-1]) and ext.isdigit() and int(ext) > max_run_id:
+        if env_id == "_".join(file_name.split("_")[0:1]) and ext.isdigit() and int(ext) > max_run_id:
             max_run_id = int(ext)
+
     return max_run_id
 
 

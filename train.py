@@ -14,13 +14,15 @@ from pprint import pprint
 import gym
 import numpy as np
 import yaml
+import imageio
 from stable_baselines.common import set_global_seeds
 from stable_baselines.common.cmd_util import make_atari_env
 from stable_baselines.common.vec_env import VecFrameStack, SubprocVecEnv, VecNormalize, DummyVecEnv
 from stable_baselines.ddpg import AdaptiveParamNoiseSpec, NormalActionNoise, OrnsteinUhlenbeckActionNoise
 from stable_baselines.ppo2.ppo2 import constfn
 from stable_baselines.bench import Monitor
-from utils import make_env, ALGOS, linear_schedule, get_latest_run_id
+from utils import make_env, ALGOS, linear_schedule, get_latest_run_id, load_group_results
+from utils.plot import plot_results
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--env', type=str, default="CartPole-v1", help='environment ID')
@@ -29,13 +31,18 @@ parser.add_argument('-n', '--n-timesteps', help='Overwrite the number of timeste
 parser.add_argument('--seed', help='Random generator seed', type=int, default=0)
 parser.add_argument('--trained-agent', help='Path to a pretrained agent to continue training', default='', type=str)
 parser.add_argument('--exp-name',  help='(optional) experiment name, DO NOT USE _', type=str, default=None)
+parser.add_argument('--save_video_interval', help='Save video every x steps (0 = disabled)', default=0, type=int)
+parser.add_argument('--save_video_length', help='Length of recorded video. Default: 200', default=200, type=int)
+parser.add_argument('--play', help='Length of gif of the trained agent (-1 = disabled)', default=-1, type=int)
 
 parser.add_argument('--log-interval', help='Override log interval (default: -1, no change)', default=-1, type=int)
 parser.add_argument('-f', '--log-folder', help='Log folder', type=str, default='logs')
 parser.add_argument('--no-monitor', help='do not monitor training', action='store_true', default=False)
 parser.add_argument('--no-tensorboard', help='do not create tensorboard', action='store_true', default=False)
+parser.add_argument('--no-plot', help='do not plot the results', action='store_true', default=False)
 # ToDo: get path for loading a spesific hyperparams.
 # ToDo: add option for wrapping the env with VecVideo Record from OpenAI or Stable Baseline
+# ToDo: add saving to wandb
 args = parser.parse_args()
 
 if args.trained_agent != "":
@@ -50,19 +57,23 @@ if env_id not in registered_envs:
     closest_match = difflib.get_close_matches(env_id, registered_envs, n=1)[0]
     raise ValueError('{} not found in gym registry, you maybe meant {}?'.format(env_id, closest_match))
 
-if args.exp_name:
-    assert (not ('_' in args.exp_name)), 'experiment name should not include _'
-
+exp_name = args.exp_name
 log_path = "{}/{}/".format(args.log_folder, args.algo)
-if args.exp_name:
-    save_path = os.path.join(log_path, "{}_{}".format(env_id, get_latest_run_id(log_path, env_id) + 1))
+
+if exp_name:
+    assert (not ('_' in exp_name)), 'experiment name should not include _'
+    save_path = os.path.join(log_path,
+                             "{}_{}_{}".format(env_id, exp_name, get_latest_run_id(log_path, env_id, exp_name) + 1))
 else:
-    save_path = os.path.join(log_path, "{}_{}_{}".format(env_id, args.exp_name, get_latest_run_id(log_path, env_id) + 1))
+    save_path = os.path.join(log_path, "{}_{}".format(env_id, get_latest_run_id(log_path, env_id) + 1))
 
 params_path = "{}/{}".format(save_path, env_id)
 os.makedirs(params_path, exist_ok=True)
 tensorboard_log = None if args.no_tensorboard else save_path
 monitor_log = None if args.no_monitor else save_path
+
+#VecVideoRecorder(env, osp.join(logger.get_dir(), "videos"), record_video_trigger=lambda x: x % args.save_video_interval == 0, video_length=args.save_video_length)
+
 
 is_atari = 'NoFrameskip' in env_id
 
@@ -203,3 +214,20 @@ if normalize:
         env = env.venv
     # Important: save the running average, for testing the agent we need that normalization
     env.save_running_average(params_path)
+
+if not args.no_plot:
+    results = load_group_results(save_path, verbose=True)
+    f, _ = plot_results(results, average_group=True, shaded_std=False)
+    f.savefig(os.path.join(save_path, 'results.pdf'), bbox_inches='tight', format='pdf')
+
+if args.play:
+    images = []
+    obs = model.env.reset()
+    img = model.env.render(mode='rgb_array')
+    for i in range(args.play):
+        images.append(img)
+        action, _ = model.predict(obs)
+        obs, _, _, _ = model.env.step(action)
+        img = model.env.render(mode='rgb_array')
+
+    imageio.mimsave('lander_a2c.gif', [np.array(img[0]) for i, img in enumerate(images) if i % 2 == 0], fps=29)
