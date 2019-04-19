@@ -23,6 +23,7 @@ from stable_baselines.bench import Monitor
 from stable_baselines import logger
 from stable_baselines import PPO2, A2C, ACER, ACKTR, DQN, DDPG
 from stable_baselines.results_plotter import load_results, ts2xy
+from utils.wrappers import ModifyEnvParams
 
 # Temp fix until SAC is integrated into stable_baselines
 try:
@@ -79,7 +80,7 @@ register_policy('CustomDQNPolicy', CustomDQNPolicy)
 register_policy('CustomMlpPolicy', CustomMlpPolicy)
 
 
-def make_env(env_id, rank=0, seed=0, log_dir=None):
+def make_env(env_id, rank=0, seed=0, log_dir=None, env_params=[]):
     """
     Helper function to multiprocess training
     and log the progress.
@@ -96,6 +97,8 @@ def make_env(env_id, rank=0, seed=0, log_dir=None):
     def _init():
         set_global_seeds(seed + rank)
         env = gym.make(env_id)
+        if len(env_params) > 0:
+            env = ModifyEnvParams(env, **env_params)
         env.seed(seed + rank)
         env = Monitor(env, os.path.join(log_dir, str(rank)), allow_early_resets=True)
         return env
@@ -334,3 +337,36 @@ def load_group_results(root_dir_or_dirs, env='', verbose=False):
         print('loaded %i results' % len(allresults))
     return allresults
 
+
+def parse_unknown_args(args):
+    """
+    Parse arguments not consumed by arg parser into a dictionary
+    currently supports integers, strings, boolean and None
+    """
+    def convert(value):
+        if value.isdigit():
+            return float(value)
+        if value in ['True', 'False']:
+            return bool(value)
+        if value == 'None':
+            return None
+        return value
+
+    retval = {}
+    preceded_by_key = False
+
+    for arg in args:
+        if arg.startswith('--'):
+            if '=' in arg:
+                key = arg.split('=')[0][2:]
+                value = arg.split('=')[1]
+                retval[key] = convert(value)
+            else:
+                key = arg[2:]
+                preceded_by_key = True
+
+        elif preceded_by_key:
+            retval[key] = convert(arg)
+            preceded_by_key = False
+
+    return retval

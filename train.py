@@ -22,16 +22,18 @@ from stable_baselines.ddpg import AdaptiveParamNoiseSpec, NormalActionNoise, Orn
 from stable_baselines.common.vec_env.vec_video_recorder import VecVideoRecorder
 from stable_baselines.ppo2.ppo2 import constfn
 from stable_baselines.bench import Monitor
-from utils import make_env, ALGOS, linear_schedule, get_latest_run_id, load_group_results
+from utils.wrappers import ModifyEnvParams
+from utils import make_env, ALGOS, linear_schedule, get_latest_run_id, load_group_results, parse_unknown_args
 from utils.plot import plot_results
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(description='Any extra args will be used for modifying environment dynamics')
 parser.add_argument('--env', type=str, default="CartPole-v1", help='environment ID')
 parser.add_argument('--algo', help='RL Algorithm', default='ppo2', type=str, required=False, choices=list(ALGOS.keys()))
-parser.add_argument('-n', '--n-timesteps', help='Overwrite the number of timesteps', default=-1, type=int)
 parser.add_argument('--seed', help='Random generator seed', type=int, default=0)
-parser.add_argument('--trained-agent', help='Path to a pretrained agent to continue training', default='', type=str)
 parser.add_argument('--exp-name',  help='(optional) experiment name, DO NOT USE _', type=str, default=None)
+parser.add_argument('-n', '--n-timesteps', help='Overwrite the number of timesteps', default=-1, type=int)
+
+parser.add_argument('--trained-agent', help='Path to a pretrained agent to continue training', default='', type=str)
 parser.add_argument('--save_video_interval', help='Save video every x steps (0 = disabled)', default=0, type=int)
 parser.add_argument('--save_video_length', help='Length of recorded video. Default: 200', default=200, type=int)
 parser.add_argument('--play', help='Length of gif of the trained agent (-1 = disabled)', default=-1, type=int)
@@ -42,9 +44,10 @@ parser.add_argument('--no-monitor', help='do not monitor training', action='stor
 parser.add_argument('--no-tensorboard', help='do not create tensorboard', action='store_true', default=False)
 parser.add_argument('--no-plot', help='do not plot the results', action='store_true', default=False)
 # ToDo: get path for loading a spesific hyperparams.
-# ToDo: add option for wrapping the env with VecVideo Record from OpenAI or Stable Baseline
 # ToDo: add saving to wandb
-args = parser.parse_args()
+# ToDo: support changing environments for Atari
+args, env_params = parser.parse_known_args()
+env_params = parse_unknown_args(env_params)
 
 if args.trained_agent != "":
     assert args.trained_agent.endswith('.pkl') and os.path.isfile(args.trained_agent), \
@@ -92,6 +95,9 @@ with open('hyperparams/{}.yml'.format(args.algo), 'r') as f:
 # Sort hyperparams that will be saved
 saved_hyperparams = OrderedDict([(key, hyperparams[key]) for key in sorted(hyperparams.keys())])
 pprint(saved_hyperparams)
+if len(env_params):
+    print("environment parameters")
+    pprint(env_params)
 
 n_envs = hyperparams.get('n_envs', 1)
 
@@ -137,14 +143,16 @@ elif args.algo in ['dqn', 'ddpg']:
     if hyperparams.get('normalize', False):
         print("WARNING: normalization not supported yet for DDPG/DQN")
     env = gym.make(env_id)
+    if len(env_params) > 0:
+        env = ModifyEnvParams(env, **env_params)
     env.seed(args.seed)
     if not args.no_monitor:
-        env = Monitor(env, save_path, allow_early_resets=True)
+        env = Monitor(env, monitor_log, allow_early_resets=True)
 else:
     if n_envs == 1:
-        env = DummyVecEnv([make_env(env_id, 0, args.seed, monitor_log)])
+        env = DummyVecEnv([make_env(env_id, 0, args.seed, monitor_log, env_params)])
     else:
-        env = SubprocVecEnv([make_env(env_id, i, args.seed, monitor_log) for i in range(n_envs)])
+        env = SubprocVecEnv([make_env(env_id, i, args.seed, monitor_log, env_params) for i in range(n_envs)])
     if normalize:
         print("Normalizing input and return")
         env = VecNormalize(env, **normalize_kwargs)
@@ -209,6 +217,7 @@ model.save("{}/{}".format(save_path, env_id))
 # Save hyperparams
 with open(os.path.join(params_path, 'config.yml'), 'w') as f:
     saved_hyperparams.update(args.__dict__)
+    saved_hyperparams.update(env_params)
     yaml.dump(saved_hyperparams, f)
 
 if normalize:
@@ -218,10 +227,10 @@ if normalize:
     # Important: save the running average, for testing the agent we need that normalization
     env.save_running_average(params_path)
 
-if not args.no_plot:
+if not args.no_plot and n_timesteps > 1:
     results = load_group_results(save_path, verbose=True)
     f, _ = plot_results(results, average_group=True, shaded_std=False)
-    f.savefig(os.path.join(save_path, 'results.pdf'), bbox_inches='tight', format='pdf')
+    f.savefig(os.path.join(save_path, 'results.png'), bbox_inches='tight', format='png')
 
 if args.play > 0:
     images = []
@@ -230,9 +239,9 @@ if args.play > 0:
     # display.start()
     obs = model.env.reset()
     for i in range(args.play):
+        img = model.env.render(mode='rgb_array')
         images.append(img)
         action, _ = model.predict(obs)
         obs, _, _, _ = model.env.step(action)
-        img = model.env.render(mode='rgb_array')
 
     imageio.mimsave('lander_a2c.gif', [np.array(img[0]) for i, img in enumerate(images) if i % 2 == 0], fps=29)
