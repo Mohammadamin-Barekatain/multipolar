@@ -2,7 +2,7 @@
 Author: Mohammadamin Barekatain
 Affiliation: TUM & OSX
 
-Parts of this script has been copied from https://github.com/araffin/rl-baselines-zoo
+Small parts of this script has been copied from https://github.com/araffin/rl-baselines-zoo
 """
 
 import argparse
@@ -19,6 +19,7 @@ from stable_baselines.common import set_global_seeds
 from stable_baselines.common.cmd_util import make_atari_env
 from stable_baselines.common.vec_env import VecFrameStack, SubprocVecEnv, VecNormalize, DummyVecEnv
 from stable_baselines.ddpg import AdaptiveParamNoiseSpec, NormalActionNoise, OrnsteinUhlenbeckActionNoise
+from stable_baselines.common.vec_env.vec_video_recorder import VecVideoRecorder
 from stable_baselines.ppo2.ppo2 import constfn
 from stable_baselines.bench import Monitor
 from utils import make_env, ALGOS, linear_schedule, get_latest_run_id, load_group_results
@@ -71,9 +72,6 @@ params_path = "{}/{}".format(save_path, env_id)
 os.makedirs(params_path, exist_ok=True)
 tensorboard_log = None if args.no_tensorboard else save_path
 monitor_log = None if args.no_monitor else save_path
-
-#VecVideoRecorder(env, osp.join(logger.get_dir(), "videos"), record_video_trigger=lambda x: x % args.save_video_interval == 0, video_length=args.save_video_length)
-
 
 is_atari = 'NoFrameskip' in env_id
 
@@ -159,6 +157,10 @@ if hyperparams.get('frame_stack', False):
     print("Stacking {} frames".format(n_stack))
     del hyperparams['frame_stack']
 
+if args.save_video_interval != 0:
+    env = VecVideoRecorder(env, save_path, record_video_trigger=lambda x: x % args.save_video_interval == 0,
+                           video_length=args.save_video_length)
+
 # Parse noise string for DDPG
 if args.algo == 'ddpg' and hyperparams.get('noise_type') is not None:
     noise_type = hyperparams['noise_type'].strip()
@@ -206,6 +208,7 @@ model.save("{}/{}".format(save_path, env_id))
 
 # Save hyperparams
 with open(os.path.join(params_path, 'config.yml'), 'w') as f:
+    saved_hyperparams.update(args.__dict__)
     yaml.dump(saved_hyperparams, f)
 
 if normalize:
@@ -220,10 +223,12 @@ if not args.no_plot:
     f, _ = plot_results(results, average_group=True, shaded_std=False)
     f.savefig(os.path.join(save_path, 'results.pdf'), bbox_inches='tight', format='pdf')
 
-if args.play:
+if args.play > 0:
     images = []
+    # from pyvirtualdisplay import Display
+    # display = Display(visible=0, size=(1400, 900))
+    # display.start()
     obs = model.env.reset()
-    img = model.env.render(mode='rgb_array')
     for i in range(args.play):
         images.append(img)
         action, _ = model.predict(obs)
