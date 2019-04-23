@@ -124,7 +124,7 @@ def create_test_env(env_id, n_envs=1, is_atari=False,
     """
     # HACK to save logs
     if log_dir is not None:
-        os.environ["OPENAI_LOG_FORMAT"] = 'csv'
+        os.environ["OPENAI_LOG_FORMAT"] = 'log'
         os.environ["OPENAI_LOGDIR"] = os.path.abspath(log_dir)
         os.makedirs(log_dir, exist_ok=True)
         logger.configure()
@@ -283,12 +283,13 @@ def get_saved_hyperparams(stats_path, norm_reward=False, test_mode=False):
 Result_obj = namedtuple('Result', 'monitor dirname')
 Result_obj.__new__.__defaults__ = (None,) * len(Result_obj._fields)
 
-def load_group_results(root_dir_or_dirs, env='', verbose=False):
+def load_group_results(root_dir_or_dirs, env='', verbose=False, mask=None):
     '''
     load summaries of runs from a list of directories (including subdirectories)
     Arguments:
     verbose: bool - if True, will print out list of directories from which the data is loaded. Default: False
     env: if provided, only results of the corresponding env would be loaded.
+    mask: if provided,
     Returns:
     List of Result objects with the following fields:
          - dirname - path to the directory data was loaded from
@@ -316,8 +317,10 @@ def load_group_results(root_dir_or_dirs, env='', verbose=False):
                 result = {'dirname': dirname}
 
                 try:
-                    if not dirname.split('/')[-1].startswith(env):
+                    name = dirname.split('/')[-1]
+                    if not name.startswith(env) or (mask and (not re.search(mask, name))):
                         continue
+
                     data = load_results(dirname)
                     if len(data) < 2:
                         print('empty dir ', dirname)
@@ -368,5 +371,7 @@ def parse_unknown_args(args):
         elif preceded_by_key:
             retval[key] = convert(arg)
             preceded_by_key = False
+        else:
+            raise ValueError("Invalid arg: %s" % arg)
 
     return retval

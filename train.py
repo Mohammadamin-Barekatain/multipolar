@@ -14,7 +14,7 @@ from pprint import pprint
 import gym
 import numpy as np
 import yaml
-import imageio
+from stable_baselines import logger
 from stable_baselines.common import set_global_seeds
 from stable_baselines.common.cmd_util import make_atari_env
 from stable_baselines.common.vec_env import VecFrameStack, SubprocVecEnv, VecNormalize, DummyVecEnv
@@ -23,7 +23,7 @@ from stable_baselines.common.vec_env.vec_video_recorder import VecVideoRecorder
 from stable_baselines.ppo2.ppo2 import constfn
 from stable_baselines.bench import Monitor
 from utils.wrappers import ModifyEnvParams
-from utils import make_env, ALGOS, linear_schedule, get_latest_run_id, load_group_results, parse_unknown_args
+from utils import make_env, ALGOS, linear_schedule, get_latest_run_id, load_group_results, parse_unknown_args, create_test_env
 from utils.plot import plot_results
 
 parser = argparse.ArgumentParser(description='Any extra args will be used for modifying environment dynamics')
@@ -36,8 +36,9 @@ parser.add_argument('-n', '--n-timesteps', help='Overwrite the number of timeste
 parser.add_argument('--trained-agent', help='Path to a pretrained agent to continue training', default='', type=str)
 parser.add_argument('--save_video_interval', help='Save video every x steps (0 = disabled)', default=0, type=int)
 parser.add_argument('--save_video_length', help='Length of recorded video. Default: 200', default=200, type=int)
-parser.add_argument('--play', help='Length of gif of the trained agent (-1 = disabled)', default=-1, type=int)
+parser.add_argument('--play', help='Length of gif of the final trained agent (-1 = disabled)', default=-1, type=int)
 
+parser.add_argument('log-outputs', help='Save the putputs instead of diplying them', default=False)
 parser.add_argument('--log-interval', help='Override log interval (default: -1, no change)', default=-1, type=int)
 parser.add_argument('-f', '--log-folder', help='Log folder', type=str, default='logs')
 parser.add_argument('--no-monitor', help='do not monitor training', action='store_true', default=False)
@@ -70,6 +71,10 @@ if exp_name:
                              "{}_{}_{}".format(env_id, exp_name, get_latest_run_id(log_path, env_id, exp_name) + 1))
 else:
     save_path = os.path.join(log_path, "{}_{}".format(env_id, get_latest_run_id(log_path, env_id) + 1))
+
+if args.log_outputs:
+    # Log the outputs
+    logger.configure(folder=save_path, format_strs=['log'])
 
 params_path = "{}/{}".format(save_path, env_id)
 os.makedirs(params_path, exist_ok=True)
@@ -233,21 +238,29 @@ if not args.no_plot and n_timesteps > 1:
     f.savefig(os.path.join(save_path, 'results.png'), bbox_inches='tight', format='png')
 
 if args.play > 0:
-    if not args.save_video_interval:
-        env = VecVideoRecorder(model.env, save_path,
-                               record_video_trigger=lambda x: x == 0, video_length=args.play,
-                               name_prefix="{}-{}-final".format(args.algo, env_id))
-    else:
-        env.record_video_trigger = lambda x: x == 0
-        env.name_prefix = "{}-{}-final".format(args.algo, env_id)
+    test_path = os.path.join(save_path, 'test')
+    hyperparams['normalize'] = normalize
+    hyperparams['n_stack'] = n_stack
+    if normalize:
+        hyperparams['normalize_kwargs'] = normalize_kwargs
+
+    env = create_test_env(env_id, n_envs=1, is_atari=is_atari,
+                          stats_path=params_path, seed=0, log_dir=test_path, hyperparams=hyperparams)
+    _ = env.reset()
+
+    env = VecVideoRecorder(env, test_path,
+                           record_video_trigger=lambda x: x == 0, video_length=args.play,
+                           name_prefix="{}-{}-final".format(args.algo, env_id))
 
     obs = env.reset()
     for _ in range(args.play + 1):
+        # action = [env.action_space.sample()]
         action, _ = model.predict(obs, deterministic=True)
         if isinstance(env.action_space, gym.spaces.Box):
             action = np.clip(action, env.action_space.low, env.action_space.high)
         obs, _, _, _ = env.step(action)
 
+    # Workaround for https://github.com/openai/gym/issues/893
     if n_envs == 1 and 'Bullet' not in env_id and not is_atari:
         env = env.venv
         # DummyVecEnv
@@ -257,3 +270,4 @@ if args.play > 0:
     else:
         # SubprocVecEnv
         env.close()
+
