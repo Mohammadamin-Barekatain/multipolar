@@ -12,7 +12,7 @@ class ModifyEnvParams(gym.Wrapper):
 
     def __init__(self, env, **params):
         """
-        Modify the parameters of the given Gym environment with paramas.
+        Modify the parameters of the given Gym environment with params.
 
         env: (Gym Environment) the environment to wrap
         params: the parameters to change in env

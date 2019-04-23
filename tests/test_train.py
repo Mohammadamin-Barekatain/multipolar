@@ -40,7 +40,8 @@ def test_train(experiment):
         '-n', str(N_STEPS),
         '--algo', algo,
         '--env', env_id,
-        '--log-folder', LOG_FOLDER
+        '--log-folder', LOG_FOLDER,
+        '--no-plot'
     ]
 
     return_code = subprocess.call(['python', 'train.py'] + args)
@@ -54,7 +55,8 @@ def test_continue_training():
         '--algo', algo,
         '--env', env_id,
         '--log-folder', LOG_FOLDER,
-        '-i', 'trained_agents/a2c/MountainCar-v0.pkl'
+        '-i', 'trained_agents/a2c/MountainCar-v0.pkl',
+        '--no-plot'
     ]
 
     return_code = subprocess.call(['python', 'train.py'] + args)

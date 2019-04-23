@@ -233,15 +233,27 @@ if not args.no_plot and n_timesteps > 1:
     f.savefig(os.path.join(save_path, 'results.png'), bbox_inches='tight', format='png')
 
 if args.play > 0:
-    images = []
-    # from pyvirtualdisplay import Display
-    # display = Display(visible=0, size=(1400, 900))
-    # display.start()
-    obs = model.env.reset()
-    for i in range(args.play):
-        img = model.env.render(mode='rgb_array')
-        images.append(img)
-        action, _ = model.predict(obs)
-        obs, _, _, _ = model.env.step(action)
+    if not args.save_video_interval:
+        env = VecVideoRecorder(model.env, save_path,
+                               record_video_trigger=lambda x: x == 0, video_length=args.play,
+                               name_prefix="{}-{}-final".format(args.algo, env_id))
+    else:
+        env.record_video_trigger = lambda x: x == 0
+        env.name_prefix = "{}-{}-final".format(args.algo, env_id)
 
-    imageio.mimsave('lander_a2c.gif', [np.array(img[0]) for i, img in enumerate(images) if i % 2 == 0], fps=29)
+    obs = env.reset()
+    for _ in range(args.play + 1):
+        action, _ = model.predict(obs, deterministic=True)
+        if isinstance(env.action_space, gym.spaces.Box):
+            action = np.clip(action, env.action_space.low, env.action_space.high)
+        obs, _, _, _ = env.step(action)
+
+    if n_envs == 1 and 'Bullet' not in env_id and not is_atari:
+        env = env.venv
+        # DummyVecEnv
+        while isinstance(env, VecNormalize) or isinstance(env, VecFrameStack):
+            env = env.venv
+        env.envs[0].env.close()
+    else:
+        # SubprocVecEnv
+        env.close()

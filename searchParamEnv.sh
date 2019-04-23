@@ -7,7 +7,7 @@ do
         for seed in 1000 2000 3000
         do
             exp_name="$main_engine_power-$scale"
-            cmd="python train.py --env LunarLanderContinuous-v2 --algo ppo2 --seed $seed --exp-name $exp_name --MAIN_ENGINE_POWER $main_engine_power --SCALE $scale"
+            cmd="python train.py --env LunarLanderContinuous-v2 --algo ppo2 --seed $seed --exp-name $exp_name --MAIN_ENGINE_POWER $main_engine_power --SCALE $scale --play 1000"
             `$cmd`
         done
     done
