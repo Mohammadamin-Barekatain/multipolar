@@ -6,7 +6,11 @@ Parts of this script has been copied from https://github.com/hill-a/stable-basel
 """
 
 import numpy as np
+import os
+import gym
+from utils import create_test_env
 from stable_baselines.results_plotter import ts2xy, load_results
+from stable_baselines.common.vec_env.vec_video_recorder import VecVideoRecorder
 
 class Callback(object):
     """Abstract base class used to build new callbacks."""
@@ -49,5 +53,51 @@ class ModelCheckpoint(Callback):
                     # Example for saving best model
                     print("Saving new best model")
                     _locals['self'].save(self.log_dir + 'best_model.pkl')
+        self.n_steps += 1
+        return True
+
+class VideoRecorder(Callback):
+    """"Save the video of the agent after some epoch."""
+    def __init__(self, env_id, video_folder, hyperparams, params_path, is_atari, video_length, deterministic=True, name_prefix='video', interval=10000):
+        """
+        :param env_id: environment id
+        :param video_folder: (str) Where to save videos
+        :param video_length: (int)  Length of recorded videos
+        :param name_prefix: (str) Prefix to the video name
+        :param interval:
+        """
+        #ToDo: finish the doc string
+
+        self.best_mean_reward = -np.inf
+        self.n_steps = 0
+        self.video_folder = video_folder
+        self.interval = interval
+        self.video_length = video_length
+        self.deterministic = deterministic
+
+        test_path = os.path.join(video_folder, 'video')
+
+        env = create_test_env(env_id, n_envs=1, is_atari=is_atari,
+                              stats_path=params_path, seed=0, hyperparams=hyperparams)
+        env.reset()
+
+        self.env = VecVideoRecorder(env, test_path,
+                               record_video_trigger=lambda x: x == 0, video_length=video_length,
+                               name_prefix=name_prefix)
+
+
+    def callback(self, _locals, _globals):
+        # record every 'interval' calls
+        if self.n_steps % self.interval == 0:
+            env = self.env
+
+            obs = env.reset()
+            for _ in range(self.video_length + 1):
+                # action = [env.action_space.sample()]
+                action, _ = _locals['self'].predict(obs, deterministic=self.deterministic)
+                if isinstance(env.action_space, gym.spaces.Box):
+                    action = np.clip(action, env.action_space.low, env.action_space.high)
+                obs, _, _, _ = env.step(action)
+
         self.n_steps += 1
         return True

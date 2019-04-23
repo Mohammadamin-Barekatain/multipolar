@@ -108,7 +108,7 @@ def make_env(env_id, rank=0, seed=0, log_dir=None, env_params=[]):
 
 def create_test_env(env_id, n_envs=1, is_atari=False,
                     stats_path=None, seed=0,
-                    log_dir='', should_render=True, hyperparams=None):
+                    log_dir=None, should_render=True, hyperparams=None):
     """
     Create environment for testing a trained agent
 

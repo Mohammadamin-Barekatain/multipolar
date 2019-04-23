@@ -25,6 +25,7 @@ from stable_baselines.bench import Monitor
 from utils.wrappers import ModifyEnvParams
 from utils import make_env, ALGOS, linear_schedule, get_latest_run_id, load_group_results, parse_unknown_args, create_test_env
 from utils.plot import plot_results
+from utils.callbacks import VideoRecorder
 
 parser = argparse.ArgumentParser(description='Any extra args will be used for modifying environment dynamics')
 parser.add_argument('--env', type=str, default="CartPole-v1", help='environment ID')
@@ -35,10 +36,10 @@ parser.add_argument('-n', '--n-timesteps', help='Overwrite the number of timeste
 
 parser.add_argument('--trained-agent', help='Path to a pretrained agent to continue training', default='', type=str)
 parser.add_argument('--save_video_interval', help='Save video every x steps (0 = disabled)', default=0, type=int)
-parser.add_argument('--save_video_length', help='Length of recorded video. Default: 200', default=200, type=int)
+parser.add_argument('--save_video_length', help='Length of recorded video. Default: 500', default=500, type=int)
 parser.add_argument('--play', help='Length of gif of the final trained agent (-1 = disabled)', default=-1, type=int)
 
-parser.add_argument('log-outputs', help='Save the putputs instead of diplying them', default=False)
+parser.add_argument('--log-outputs', help='Save the putputs instead of diplying them', default=False)
 parser.add_argument('--log-interval', help='Override log interval (default: -1, no change)', default=-1, type=int)
 parser.add_argument('-f', '--log-folder', help='Log folder', type=str, default='logs')
 parser.add_argument('--no-monitor', help='do not monitor training', action='store_true', default=False)
@@ -171,8 +172,12 @@ if hyperparams.get('frame_stack', False):
     del hyperparams['frame_stack']
 
 if args.save_video_interval != 0:
-    env = VecVideoRecorder(env, save_path, record_video_trigger=lambda x: x % args.save_video_interval == 0,
-                           video_length=args.save_video_length)
+    callback_env_params = {'normalize': normalize, 'n_stack': n_stack, 'normalize_kwargs': normalize_kwargs}
+
+    callback = VideoRecorder(env_id, save_path, callback_env_params, params_path, is_atari,
+                             args.save_video_length, interval=args.save_video_interval).callback
+else:
+    callback = None
 
 # Parse noise string for DDPG
 if args.algo == 'ddpg' and hyperparams.get('noise_type') is not None:
@@ -213,7 +218,7 @@ kwargs = {}
 if args.log_interval > -1:
     kwargs = {'log_interval': args.log_interval}
 
-model.learn(n_timesteps, **kwargs)
+model.learn(n_timesteps, callback=callback, **kwargs)
 
 # Save trained model
 print("Saving to {}".format(save_path))
@@ -239,14 +244,11 @@ if not args.no_plot and n_timesteps > 1:
 
 if args.play > 0:
     test_path = os.path.join(save_path, 'test')
-    hyperparams['normalize'] = normalize
-    hyperparams['n_stack'] = n_stack
-    if normalize:
-        hyperparams['normalize_kwargs'] = normalize_kwargs
+    env_params = {'normalize': normalize, 'n_stack': n_stack, 'normalize_kwargs': normalize_kwargs}
 
     env = create_test_env(env_id, n_envs=1, is_atari=is_atari,
-                          stats_path=params_path, seed=0, log_dir=test_path, hyperparams=hyperparams)
-    _ = env.reset()
+                          stats_path=params_path, seed=0, log_dir=test_path, hyperparams=env_params)
+    env.reset()
 
     env = VecVideoRecorder(env, test_path,
                            record_video_trigger=lambda x: x == 0, video_length=args.play,
