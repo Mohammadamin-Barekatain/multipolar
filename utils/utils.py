@@ -318,7 +318,7 @@ def load_group_results(root_dir_or_dirs, env='', verbose=False, mask=None):
 
                 try:
                     name = dirname.split('/')[-1]
-                    if not name.startswith(env) or (mask and (not re.search(mask, name))):
+                    if not name.startswith(env) or (mask and (not re.search(mask, dirname))) or dirname.count('/') != 2:
                         continue
 
                     data = load_results(dirname)
