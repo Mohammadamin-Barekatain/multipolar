@@ -1,3 +1,7 @@
+"""
+This script is a copy from https://github.com/araffin/rl-baselines-zoo and is useful only for testing the installation
+"""
+
 import argparse
 import os
 
@@ -61,14 +65,13 @@ def main():
 
     set_global_seeds(args.seed)
 
-    is_atari = 'NoFrameskip' in env_id
 
     stats_path = os.path.join(log_path, env_id)
     hyperparams, stats_path = get_saved_hyperparams(stats_path, norm_reward=args.norm_reward, test_mode=True)
 
     log_dir = args.reward_log if args.reward_log != '' else None
 
-    env = create_test_env(env_id, n_envs=args.n_envs, is_atari=is_atari,
+    env = create_test_env(env_id, n_envs=args.n_envs,
                           stats_path=stats_path, seed=args.seed, log_dir=log_dir,
                           should_render=not args.no_render,
                           hyperparams=hyperparams)

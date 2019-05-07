@@ -35,11 +35,11 @@ parser.add_argument('--exp-name',  help='(optional) experiment name, DO NOT USE 
 parser.add_argument('-n', '--n-timesteps', help='Overwrite the number of timesteps', default=-1, type=int)
 
 parser.add_argument('--trained-agent', help='Path to a pretrained agent to continue training', default='', type=str)
-parser.add_argument('--save_video_interval', help='Save video every x steps (0 = disabled)', default=0, type=int)
+parser.add_argument('--save_video_interval', help='Save video every x train steps (0 = disabled)', default=0, type=int)
 parser.add_argument('--save_video_length', help='Length of recorded video. Default: 500', default=500, type=int)
 parser.add_argument('--play', help='Length of gif of the final trained agent (-1 = disabled)', default=-1, type=int)
 
-parser.add_argument('--log-outputs', help='Save the putputs instead of diplying them', default=False)
+parser.add_argument('--log-outputs', help='Save the outputs instead of diplying them', default=False)
 parser.add_argument('--log-interval', help='Override log interval (default: -1, no change)', default=-1, type=int)
 parser.add_argument('-f', '--log-folder', help='Log folder', type=str, default='logs')
 parser.add_argument('--no-monitor', help='do not monitor training', action='store_true', default=False)
@@ -172,10 +172,10 @@ if hyperparams.get('frame_stack', False):
     del hyperparams['frame_stack']
 
 if args.save_video_interval != 0:
-    callback_env_params = {'normalize': normalize, 'n_stack': n_stack, 'normalize_kwargs': normalize_kwargs}
+    env_hyperparams = {'normalize': normalize, 'n_stack': n_stack, 'normalize_kwargs': normalize_kwargs}
 
-    callback = VideoRecorder(env_id, save_path, callback_env_params, params_path, is_atari,
-                             args.save_video_length, interval=args.save_video_interval).callback
+    callback = VideoRecorder(env_id, save_path, env_hyperparams, params_path,
+                             args.save_video_length, interval=1, env_params=env_params).callback
 else:
     callback = None
 
@@ -244,14 +244,13 @@ if not args.no_plot and n_timesteps > 1:
 
 if args.play > 0:
     test_path = os.path.join(save_path, 'test')
-    env_params = {'normalize': normalize, 'n_stack': n_stack, 'normalize_kwargs': normalize_kwargs}
+    env_hyperparams = {'normalize': normalize, 'n_stack': n_stack, 'normalize_kwargs': normalize_kwargs}
 
-    env = create_test_env(env_id, n_envs=1, is_atari=is_atari,
-                          stats_path=params_path, seed=0, log_dir=test_path, hyperparams=env_params)
+    env = create_test_env(env_id, n_envs=1, stats_path=params_path, seed=9999, log_dir=test_path,
+                          hyperparams=env_hyperparams, env_params=env_params)
     env.reset()
 
-    env = VecVideoRecorder(env, test_path,
-                           record_video_trigger=lambda x: x == 0, video_length=args.play,
+    env = VecVideoRecorder(env, test_path, record_video_trigger=lambda x: x == 0, video_length=args.play,
                            name_prefix="{}-{}-final".format(args.algo, env_id))
 
     obs = env.reset()
@@ -263,7 +262,7 @@ if args.play > 0:
         obs, _, _, _ = env.step(action)
 
     # Workaround for https://github.com/openai/gym/issues/893
-    if n_envs == 1 and 'Bullet' not in env_id and not is_atari:
+    if 'Bullet' not in env_id and not is_atari:
         env = env.venv
         # DummyVecEnv
         while isinstance(env, VecNormalize) or isinstance(env, VecFrameStack):

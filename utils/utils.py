@@ -106,22 +106,29 @@ def make_env(env_id, rank=0, seed=0, log_dir=None, env_params=[]):
     return _init
 
 
-def create_test_env(env_id, n_envs=1, is_atari=False,
-                    stats_path=None, seed=0,
-                    log_dir=None, should_render=True, hyperparams=None):
+def create_test_env(env_id, n_envs=1, stats_path=None, seed=0, log_dir=None, should_render=True, hyperparams=None,
+                    env_params={}):
     """
     Create environment for testing a trained agent
 
     :param env_id: (str)
     :param n_envs: (int) number of processes
-    :param is_atari: (bool)
     :param stats_path: (str) path to folder containing saved running averaged
     :param seed: (int) Seed for random number generator
     :param log_dir: (str) Where to log rewards
     :param should_render: (bool) For Pybullet env, display the GUI
-    :param hyperparams: (dict) Additional hyperparams (ex: n_stack)
+    :param hyperparams: (dict) Additional hyperparams for the env (ex: n_stack)
+    :param env_params: (dict) the parameters to change in env
     :return: (gym.Env)
     """
+    # If the environment is not found, suggest the closest match
+    registered_envs = set(gym.envs.registry.env_specs.keys())
+    if env_id not in registered_envs:
+        closest_match = difflib.get_close_matches(env_id, registered_envs, n=1)[0]
+        raise ValueError('{} not found in gym registry, you maybe meant {}?'.format(env_id, closest_match))
+
+    is_atari = 'NoFrameskip' in env_id
+
     # HACK to save logs
     if log_dir is not None:
         os.environ["OPENAI_LOG_FORMAT"] = 'log'
@@ -136,7 +143,7 @@ def create_test_env(env_id, n_envs=1, is_atari=False,
         # Frame-stacking with 4 frames
         env = VecFrameStack(env, n_stack=4)
     elif n_envs > 1:
-        env = SubprocVecEnv([make_env(env_id, i, seed, log_dir) for i in range(n_envs)])
+        env = SubprocVecEnv([make_env(env_id, i, seed, log_dir, env_params) for i in range(n_envs)])
     # Pybullet envs does not follow gym.render() interface
     elif "Bullet" in env_id:
         spec = gym.envs.registry.env_specs[env_id]
@@ -156,13 +163,15 @@ def create_test_env(env_id, n_envs=1, is_atari=False,
         def _init():
             # TODO: fix for pybullet locomotion envs
             env = class_(**{**spec._kwargs}, **{render_name: should_render})
+            if len(env_params) > 0:
+                env = ModifyEnvParams(env, **env_params)
             env.seed(0)
             if log_dir is not None:
                 env = Monitor(env, os.path.join(log_dir, "0"), allow_early_resets=True)
             return env
 
         if use_subproc:
-            env = SubprocVecEnv([make_env(env_id, 0, seed, log_dir)])
+            env = SubprocVecEnv([make_env(env_id, 0, seed, log_dir, env_params)])
         else:
             env = DummyVecEnv([_init])
     else:
