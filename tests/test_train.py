@@ -55,7 +55,7 @@ def test_continue_training():
         '--algo', algo,
         '--env', env_id,
         '--log-folder', LOG_FOLDER,
-        '-i', 'trained_agents/a2c/MountainCar-v0.pkl',
+        '--trained-agent', 'trained_agents/a2c/MountainCar-v0.pkl',
         '--no-plot'
     ]
 

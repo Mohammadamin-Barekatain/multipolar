@@ -30,7 +30,7 @@ class ModelCheckpoint(Callback):
     #ToDo: complete the doc and save every epoch. add a flag for only saving the best like:
     # https://github.com/keras-team/keras/blob/master/keras/callbacks.py#L633
 
-    def __init__(self, log_dir, interval=1000, xaxis='timesteps'):
+    def __init__(self, log_dir, interval=1000, xaxis='episodes'):
         self.best_mean_reward = -np.inf
         self.n_steps = 0
         self.log_dir = log_dir
@@ -42,17 +42,17 @@ class ModelCheckpoint(Callback):
         if (self.n_steps + 1) % self.interval == 0:
             # Evaluate policy performance
             x, y = ts2xy(load_results(self.log_dir), self.xaxis)
-            if len(x) > 0:
+            if len(y) >= 100:
                 mean_reward = np.mean(y[-100:])
-                print(x[-1], self.xaxis)
-                print("Best mean reward: {:.2f} - Last mean reward per episode: {:.2f}".format(
-                    self.best_mean_reward, mean_reward))
+                print(self.xaxis, x[-1])
+                print("Best mean reward: {:.2f} - Last mean reward per {}: {:.2f}".format(
+                    self.best_mean_reward, self.xaxis, mean_reward))
 
-                # New best model, you could save the agent here
+                # New best model, save the agent here
                 if mean_reward > self.best_mean_reward:
-                    best_mean_reward = mean_reward
+                    self.best_mean_reward = mean_reward
                     # Example for saving best model
-                    print("Saving new best model")
+                    print(">>> Saving new best model")
                     _locals['self'].save(self.log_dir + 'best_model.pkl')
         self.n_steps += 1
         return True
@@ -106,14 +106,13 @@ class VideoRecorder(Callback):
         self.n_steps += 1
         return True
 
-
-    def __del__(self):
-        if 'Bullet' not in self.env_id and not self.is_atari:
-            env = self.env.venv
-            # DummyVecEnv
-            while isinstance(env, VecNormalize) or isinstance(env, VecFrameStack):
-                env = env.venv
-            env.envs[0].env.close()
-        else:
-            # SubprocVecEnv
-            self.env.close()
+    # def __del__(self):
+    #     if 'Bullet' not in self.env_id and not self.is_atari:
+    #         env = self.env.venv
+    #         # DummyVecEnv
+    #         while isinstance(env, VecNormalize) or isinstance(env, VecFrameStack):
+    #             env = env.venv
+    #         env.envs[0].env.close()
+    #     else:
+    #         # SubprocVecEnv
+    #         self.env.close()

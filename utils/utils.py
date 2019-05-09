@@ -6,6 +6,7 @@ some functions has been copied from: https://github.com/openai/baselines and htt
 """
 
 import time
+import difflib
 import os
 import inspect
 import glob
@@ -175,7 +176,7 @@ def create_test_env(env_id, n_envs=1, stats_path=None, seed=0, log_dir=None, sho
         else:
             env = DummyVecEnv([_init])
     else:
-        env = DummyVecEnv([make_env(env_id, 0, seed, log_dir)])
+        env = DummyVecEnv([make_env(env_id, 0, seed, log_dir, env_params)])
 
     # Load saved stats for normalizing input and rewards
     # And optionally stack frames

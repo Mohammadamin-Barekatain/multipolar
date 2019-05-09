@@ -18,33 +18,32 @@ def evaluate_model(model, env, num_test_episodes=100, deterministic=True):
     """ returns a np array of length num_test_episodes, specifying the accumulated reward an agent got on the given env.
 
     :param model: (obj) stable_baseline model instance
-    :param env: (obj) a Gym Environment instance (make sure num_test_episodes is dividable by n_envs)
+    :param env: (obj) a Gym Environment instance
     :param num_test_episodes: (int) number of test episodes
     :param deterministic: (bool) weather to sample actions deterministicly (True) or randomly (False) from the policy.
     """
+    obs = env.reset()
+    n_envs = len(obs)
     ep_rewards = []
-    n_envs = len(env.reset())
-    assert num_test_episodes % n_envs == 0, 'num_test_episodes should be dividable by n_envs'
-    for _ in range(num_test_episodes // n_envs):
-        obs = env.reset()
-        running_reward = np.zeros(n_envs, dtype=np.float32)
-        old_done = np.array([False] * n_envs, dtype=bool)
+    running_rewards = np.zeros(n_envs, dtype=np.float32)
 
-        while not old_done.all():
-            action, _ = model.predict(obs, deterministic=deterministic)
-            # Clip Action to avoid out of bound errors
-            if isinstance(env.action_space, gym.spaces.Box):
-                action = np.clip(action, env.action_space.low, env.action_space.high)
+    while num_test_episodes > len(ep_rewards):
 
-            obs, reward, done, _ = env.step(action)
-            # mask-out done expisodes
-            running_reward += reward * old_done
-            old_done = done
+        action, _ = model.predict(obs, deterministic=deterministic)
+        # Clip Action to avoid out of bound errors
+        if isinstance(env.action_space, gym.spaces.Box):
+            action = np.clip(action, env.action_space.low, env.action_space.high)
 
-        #ToDo: Maybe for env using VecNormalize, the mean reward should be normalized reward
-        ep_rewards.append(running_reward)
+        obs, reward, done, _ = env.step(action)
+        running_rewards += reward
 
-    return np.concatenate(ep_rewards, dtype=np.float32)
+        for i in range(n_envs):
+            if done[i] and num_test_episodes > len(ep_rewards):
+                #ToDo: Maybe for env using VecNormalize, the mean reward should be normalized reward
+                ep_rewards.append(running_rewards[i])
+                running_rewards[i] = 0
+
+    return np.array(ep_rewards, dtype=np.float32)
 
 
 if __name__ == '__main__':
@@ -52,7 +51,7 @@ if __name__ == '__main__':
     parser.add_argument('--trained-agent', help='Path to a pretrained agent', default=None, type=str, required=True)
 
     parser.add_argument('--exp-name', help='experiment name, DO NOT USE _', default=None, type=str, required=True)
-    parser.add_argument('--n-envs', help='number of processes', default=25, type=int)
+    parser.add_argument('--n-envs', help='number of processes', default=32, type=int)
     parser.add_argument('-nte', '--num-test-episodes', help='number of test episodes', default=100, type=int)
     parser.add_argument('--seed', help='Random generator seed', type=int, default=0)
 
@@ -96,8 +95,6 @@ if __name__ == '__main__':
             hyperparams = yaml.load(f)[env_id]
         del hyperparams['n_timesteps']
 
-    print("hyperparameters")
-    pprint(hyperparams)
 
     # Optional Frame-stacking
     n_stack = 1
@@ -118,7 +115,7 @@ if __name__ == '__main__':
     # create the test env
     env_hyperparams = {'normalize': normalize, 'n_stack': n_stack, 'normalize_kwargs': normalize_kwargs}
     env = create_test_env(env_id, n_envs=args.n_envs, stats_path=params_path, seed=seed, hyperparams=env_hyperparams,
-                          env_params=env_params)
+                          env_params=env_params, should_render=False)
 
     # load the pretrained agent
     print("Loading pretrained agent")
@@ -149,9 +146,9 @@ if __name__ == '__main__':
 
     # save video
     if args.play > 0:
-
+        name = "agent_{}_env_{}".format(trained_agent_path.split('/')[2].split('_')[1], exp_name)
         record = VideoRecorder(env_id, save_path, env_hyperparams, params_path, args.play, interval=1, seed=seed,
-                               env_params=env_params, deterministic=deterministic).callback
+                               env_params=env_params, deterministic=deterministic, name_prefix=name).callback
         record({'self': model}, None)
 
 

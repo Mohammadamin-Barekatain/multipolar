@@ -171,11 +171,11 @@ if hyperparams.get('frame_stack', False):
     print("Stacking {} frames".format(n_stack))
     del hyperparams['frame_stack']
 
-if args.save_video_interval != 0:
+if args.save_video_interval > 0:
     env_hyperparams = {'normalize': normalize, 'n_stack': n_stack, 'normalize_kwargs': normalize_kwargs}
 
     callback = VideoRecorder(env_id, save_path, env_hyperparams, params_path,
-                             args.save_video_length, interval=1, env_params=env_params).callback
+                             args.save_video_length, interval=args.save_video_interval, env_params=env_params).callback
 else:
     callback = None
 
@@ -246,7 +246,7 @@ if args.play > 0:
     test_path = os.path.join(save_path, 'test')
     env_hyperparams = {'normalize': normalize, 'n_stack': n_stack, 'normalize_kwargs': normalize_kwargs}
 
-    env = create_test_env(env_id, n_envs=1, stats_path=params_path, seed=9999, log_dir=test_path,
+    env = create_test_env(env_id, n_envs=1, stats_path=params_path, log_dir=test_path,
                           hyperparams=env_hyperparams, env_params=env_params)
     env.reset()
 

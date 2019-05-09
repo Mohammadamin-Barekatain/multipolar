@@ -44,6 +44,8 @@ def main():
     algo = args.algo
     folder = args.folder
 
+    is_atari = 'NoFrameskip' in env_id
+
     if args.exp_id == 0:
         args.exp_id = get_latest_run_id(os.path.join(folder, algo), env_id)
         print('Loading latest experiment, id={}'.format(args.exp_id))
