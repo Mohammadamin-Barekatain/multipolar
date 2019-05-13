@@ -199,7 +199,7 @@ if args.algo == 'ddpg' and hyperparams.get('noise_type') is not None:
 
 if args.trained_agent.endswith('.pkl') and os.path.isfile(args.trained_agent):
     # Continue training
-    print("Loading pretrained agent")
+    print(">>> Loading pretrained agent")
     # Policy should not be changed
     del hyperparams['policy']
 
