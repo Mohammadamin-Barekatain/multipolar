@@ -1,3 +1,7 @@
+"""
+This script is a copy from https://github.com/araffin/rl-baselines-zoo and is useful only for testing the installation
+"""
+
 import os
 import subprocess
 

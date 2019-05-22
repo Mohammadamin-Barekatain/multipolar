@@ -2,17 +2,21 @@
 Author: Mohammadamin Barekatain
 Affiliation: TUM & OSX
 """
-import os
-import gym
-import yaml
+
 import argparse
+import os
+from pprint import pprint
+
+import gym
 import numpy as np
 import pandas as pd
-
-from pprint import pprint
+import yaml
 from stable_baselines.common import set_global_seeds
-from utils import ALGOS, parse_unknown_args, create_test_env
+
+from utils import parse_unknown_args, create_test_env
 from utils.callbacks import VideoRecorder
+from utils.policies import ALGOS
+
 
 def evaluate_model(model, env, num_test_episodes=100, deterministic=True):
     """ returns a np array of length num_test_episodes, specifying the accumulated reward an agent got on the given env.

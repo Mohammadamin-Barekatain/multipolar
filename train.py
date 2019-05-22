@@ -15,17 +15,19 @@ import gym
 import numpy as np
 import yaml
 from stable_baselines import logger
+from stable_baselines.bench import Monitor
 from stable_baselines.common import set_global_seeds
 from stable_baselines.common.cmd_util import make_atari_env
 from stable_baselines.common.vec_env import VecFrameStack, SubprocVecEnv, VecNormalize, DummyVecEnv
-from stable_baselines.ddpg import AdaptiveParamNoiseSpec, NormalActionNoise, OrnsteinUhlenbeckActionNoise
 from stable_baselines.common.vec_env.vec_video_recorder import VecVideoRecorder
+from stable_baselines.ddpg import AdaptiveParamNoiseSpec, NormalActionNoise, OrnsteinUhlenbeckActionNoise
 from stable_baselines.ppo2.ppo2 import constfn
-from stable_baselines.bench import Monitor
-from utils.wrappers import ModifyEnvParams
-from utils import make_env, ALGOS, linear_schedule, get_latest_run_id, load_group_results, parse_unknown_args, create_test_env
-from utils.plot import plot_results
+
+from utils import make_env, linear_schedule, get_latest_run_id, load_group_results, parse_unknown_args, create_test_env
 from utils.callbacks import VideoRecorder
+from utils.plot import plot_results
+from utils.policies import ALGOS
+from utils.wrappers import ModifyEnvParams
 
 parser = argparse.ArgumentParser(description='Any extra args will be used for modifying environment dynamics')
 parser.add_argument('--env', type=str, default="CartPole-v1", help='environment ID')

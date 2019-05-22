@@ -5,83 +5,31 @@ Affiliation: TUM & OSX
 some functions has been copied from: https://github.com/openai/baselines and https://github.com/araffin/rl-baselines-zoo
 """
 
-import time
 import difflib
-import os
-import inspect
 import glob
-import yaml
-import pandas
+import inspect
+import os
 import os.path as osp
-import gym
+import time
 from collections import namedtuple
 
+import gym
+import pandas
+import yaml
 from gym.envs.registration import load
-from stable_baselines.deepq.policies import FeedForwardPolicy
-from stable_baselines.common.policies import FeedForwardPolicy as BasePolicy
-from stable_baselines.common.policies import register_policy
-from stable_baselines.bench import Monitor
 from stable_baselines import logger
-from stable_baselines import PPO2, A2C, ACER, ACKTR, DQN, DDPG
-from stable_baselines.results_plotter import load_results, ts2xy
+from stable_baselines.bench import Monitor
+from stable_baselines.common import set_global_seeds
+from stable_baselines.common.cmd_util import make_atari_env
+from stable_baselines.common.vec_env import DummyVecEnv, VecNormalize, VecFrameStack, SubprocVecEnv
+from stable_baselines.results_plotter import load_results
+# Do not remove the unused import below
+from utils.policies import CustomSACPolicy, CustomDQNPolicy, CustomMlpPolicy
+
 from utils.wrappers import ModifyEnvParams
 
-# Temp fix until SAC is integrated into stable_baselines
-try:
-    from stable_baselines import SAC
-except ImportError:
-    SAC = None
-from stable_baselines.common.vec_env import DummyVecEnv, VecNormalize, \
-    VecFrameStack, SubprocVecEnv
-from stable_baselines.common.cmd_util import make_atari_env
-from stable_baselines.common import set_global_seeds
 
-ALGOS = {
-    'a2c': A2C,
-    'acer': ACER,
-    'acktr': ACKTR,
-    'dqn': DQN,
-    'ddpg': DDPG,
-    'sac': SAC,
-    'ppo2': PPO2
-}
-
-
-# ================== Custom Policies =================
-
-class CustomDQNPolicy(FeedForwardPolicy):
-    def __init__(self, *args, **kwargs):
-        super(CustomDQNPolicy, self).__init__(*args, **kwargs,
-                                              layers=[64],
-                                              layer_norm=True,
-                                              feature_extraction="mlp")
-
-
-class CustomMlpPolicy(BasePolicy):
-    def __init__(self, *args, **kwargs):
-        super(CustomMlpPolicy, self).__init__(*args, **kwargs,
-                                              layers=[16],
-                                              feature_extraction="mlp")
-
-
-if SAC is not None:
-    from stable_baselines.sac.policies import FeedForwardPolicy as SACPolicy
-
-
-    class CustomSACPolicy(SACPolicy):
-        def __init__(self, *args, **kwargs):
-            super(CustomSACPolicy, self).__init__(*args, **kwargs,
-                                                  layers=[256, 256],
-                                                  feature_extraction="mlp")
-
-
-    register_policy('CustomSACPolicy', CustomSACPolicy)
-
-register_policy('CustomDQNPolicy', CustomDQNPolicy)
-register_policy('CustomMlpPolicy', CustomMlpPolicy)
-
-
-def make_env(env_id, rank=0, seed=0, log_dir=None, env_params=[]):
+def make_env(env_id, rank=0, seed=0, log_dir=None, env_params={}):
     """
     Helper function to multiprocess training
     and log the progress.

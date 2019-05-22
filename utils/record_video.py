@@ -1,11 +1,16 @@
-import os
+"""
+This script is a copy from https://github.com/araffin/rl-baselines-zoo and is useful only for testing the installation
+"""
+
 import argparse
+import os
 
 import gym
 import numpy as np
 from stable_baselines.common.vec_env import VecVideoRecorder, VecFrameStack, VecNormalize
 
-from .utils import ALGOS, create_test_env, get_saved_hyperparams
+from .policies import ALGOS
+from .utils import create_test_env, get_saved_hyperparams
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--env', help='environment ID', type=str, default='CartPole-v1')
