@@ -4,7 +4,8 @@ Affiliation: TUM & OSX
 
 Small parts of this script has been copied from https://github.com/hill-a/stable-baselines
 """
-import numpy as np
+
+from stable_baselines.common import tf_util
 import tensorflow as tf
 from stable_baselines import PPO2, A2C, ACER, ACKTR, DQN, DDPG, SAC
 from stable_baselines.common.input import observation_input
@@ -14,6 +15,8 @@ from stable_baselines.common.policies import FeedForwardPolicy as BasePolicy
 from stable_baselines.deepq.policies import FeedForwardPolicy as DQNFeedForwardPolicy
 from stable_baselines.sac.policies import FeedForwardPolicy as SACFeedForwardPolicy
 from stable_baselines.sac.policies import mlp, gaussian_likelihood, gaussian_entropy, apply_squashing_func
+from stable_baselines.a2c.utils import find_trainable_variables
+import numpy as np
 
 EPS = 1e-6  # Avoid NaN (prevents division by zero or log of zero)
 # CAP the standard deviation of the actor
@@ -76,34 +79,37 @@ class AggregatePolicy(SACFeedForwardPolicy):
                  cnn_extractor=nature_cnn, feature_extraction="cnn", layer_norm=False, act_fun=tf.nn.relu, **kwargs):
 
         assert 'source_policy_paths' in kwargs, 'path to source policies is not provided.'
-        source_policies = []
-        for path in kwargs['source_policy_paths']:
-            algo = path.split('/')[1]
-            model = ALGOS[algo].load(path, verbose=1)
-            source_policies.append(model)
-
+        source_policy_paths = kwargs['source_policy_paths']
         del kwargs['source_policy_paths']
 
         super(AggregatePolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=reuse,
                                               layers=layers, cnn_extractor=cnn_extractor, layer_norm=layer_norm,
                                               feature_extraction=feature_extraction, act_fun=act_fun, **kwargs)
 
-        self.source_policies = source_policies
-        self.K = len(source_policies)
+        self.K = len(source_policy_paths)
         self.D = self.ac_space.shape[0]
         self.n_batch = n_batch
         # override layers
         if layers is None:
             self.layers = []
 
-        # define source action placeholders of shape batch x K x D
         sources_actions = []
-        with tf.variable_scope("sources", reuse=False):
-            for ind, _ in enumerate(source_policies):
-                _, action = observation_input(ac_space, n_batch, name='ac'+str(ind))
-                sources_actions.append(action)
-            sources_actions = tf.stack(sources_actions)  # shape = K x batch x D
-            sources_actions = tf.transpose(sources_actions, perm=[1, 0, 2], name='actions')  # shape = batch x K x D
+        for ind, path in enumerate(source_policy_paths):
+            # load the model
+            algo = path.split('/')[1]
+            model = ALGOS[algo].load(path, verbose=1)
+
+            def predict(obs):
+                return model.policy_tf.step(obs, deterministic=True)
+            action = tf.py_func(predict, [self.obs_ph], tf.float32, name='source_action' + str(ind))
+
+            action.set_shape((self.n_batch, self.D))
+            action = tf.stop_gradient(action)
+
+            sources_actions.append(action)
+
+        sources_actions = tf.stack(sources_actions)  # shape = K x batch x D
+        sources_actions = tf.transpose(sources_actions, perm=[1, 0, 2], name='source_actions')  # shape = batch x K x D
 
         assert sources_actions.get_shape()[1:] == (self.K, self.D)
         self.sources_actions = sources_actions
@@ -128,18 +134,6 @@ class AggregatePolicy(SACFeedForwardPolicy):
 
         return W, b
 
-    def get_source_actions(self, obs):
-        sources_actions = []
-        for s_policy in self.source_policies:
-            action = s_policy.policy_tf.step(obs, deterministic=True)
-            sources_actions.append(action)
-        sources_actions = np.stack(sources_actions)  # shape = K x batch x D
-        sources_actions = np.transpose(sources_actions, (1, 0, 2))  # shape = batch x K x D
-
-        assert sources_actions.shape[1:] == (self.K, self.D)
-
-        return sources_actions
-
     def make_actor(self, obs=None, reuse=False, scope="pi"):
         if obs is None:
             obs = self.processed_obs
@@ -151,7 +145,6 @@ class AggregatePolicy(SACFeedForwardPolicy):
                     pi_h = self.cnn_extractor(obs, **self.cnn_kwargs)
                 else:
                     pi_h = tf.layers.flatten(obs)
-
                 pi_h = mlp(pi_h, self.layers, self.activ_fn, layer_norm=self.layer_norm)
 
             mu_W, mu_b = self.get_aggregation_var(pi_h, reuse, scope='master_mu', bias_size=self.D)
@@ -181,58 +174,47 @@ class AggregatePolicy(SACFeedForwardPolicy):
 
         return deterministic_policy, policy, logp_pi
 
-    def make_critics(self, obs=None, action=None, reuse=False, scope="values_fn", create_vf=True, create_qf=True):
-        if obs is None:
-            obs = self.processed_obs
-
-        with tf.variable_scope(scope, reuse=reuse):
-
-            if self.feature_extraction == "cnn":
-                critics_h = self.cnn_extractor(obs, **self.cnn_kwargs)
-            else:
-                critics_h = tf.layers.flatten(obs)
-
-            if create_vf:
-                # Value function
-                with tf.variable_scope('vf', reuse=reuse):
-                    vf_h = mlp(critics_h, self.layers, self.activ_fn, layer_norm=self.layer_norm)
-                    vf_W, vf_b = self.get_aggregation_var(vf_h, reuse, scope='master', bias_size=1)
-                    value_fn = tf.reduce_mean(tf.reduce_mean(self.sources_actions * vf_W, axis=1) + vf_b,
-                                              axis=-1, name='vf')
-                self.value_fn = value_fn
-
-            if create_qf:
-                # Concatenate preprocessed state and action
-                qf_h = tf.concat([critics_h, action], axis=-1)
-
-                # Double Q values to reduce overestimation
-                with tf.variable_scope('qf1', reuse=reuse):
-                    qf1_h = mlp(qf_h, self.layers, self.activ_fn, layer_norm=self.layer_norm)
-                    qf1_W, qf1_b = self.get_aggregation_var(qf1_h, reuse, scope='master', bias_size=1)
-                    qf1 = tf.reduce_mean(tf.reduce_mean(self.sources_actions * qf1_W, axis=1) + qf1_b,
-                                         axis=-1, name="qf1")
-
-                with tf.variable_scope('qf2', reuse=reuse):
-                    qf2_h = mlp(qf_h, self.layers, self.activ_fn, layer_norm=self.layer_norm)
-                    qf2_W, qf2_b = self.get_aggregation_var(qf2_h, reuse, scope='master', bias_size=1)
-                    qf2 = tf.reduce_mean(tf.reduce_mean(self.sources_actions * qf2_W, axis=1) + qf2_b,
-                                         axis=-1, name="qf2")
-
-                self.qf1 = qf1
-                self.qf2 = qf2
-
-        return self.qf1, self.qf2, self.value_fn
-
-    def step(self, obs, state=None, mask=None, deterministic=False):
-        if deterministic:
-            return self.sess.run(self.deterministic_policy,
-                                 {self.obs_ph: obs, self.sources_actions: self.get_source_actions(obs)})
-        return self.sess.run(self.policy,
-                             {self.obs_ph: obs, self.sources_actions: self.get_source_actions(obs)})
-
-    def proba_step(self, obs, state=None, mask=None):
-        return self.sess.run([self.act_mu, self.std],
-                             {self.obs_ph: obs, self.sources_actions: self.get_source_actions(obs)})
+    # def make_critics(self, obs=None, action=None, reuse=False, scope="values_fn", create_vf=True, create_qf=True):
+    #     if obs is None:
+    #         obs = self.processed_obs
+    #
+    #     with tf.variable_scope(scope, reuse=reuse):
+    #
+    #         if self.feature_extraction == "cnn":
+    #             critics_h = self.cnn_extractor(obs, **self.cnn_kwargs)
+    #         else:
+    #             critics_h = tf.layers.flatten(obs)
+    #
+    #         if create_vf:
+    #             # Value function
+    #             with tf.variable_scope('vf', reuse=reuse):
+    #                 vf_h = mlp(critics_h, self.layers, self.activ_fn, layer_norm=self.layer_norm)
+    #                 vf_W, vf_b = self.get_aggregation_var(vf_h, reuse, scope='master', bias_size=1)
+    #                 value_fn = tf.reduce_mean(tf.reduce_mean(self.sources_actions * vf_W, axis=1) + vf_b,
+    #                                           axis=-1, name='vf')
+    #             self.value_fn = value_fn
+    #
+    #         if create_qf:
+    #             # Concatenate preprocessed state and action
+    #             qf_h = tf.concat([critics_h, action], axis=-1)
+    #
+    #             # Double Q values to reduce overestimation
+    #             with tf.variable_scope('qf1', reuse=reuse):
+    #                 qf1_h = mlp(qf_h, self.layers, self.activ_fn, layer_norm=self.layer_norm)
+    #                 qf1_W, qf1_b = self.get_aggregation_var(qf1_h, reuse, scope='master', bias_size=1)
+    #                 qf1 = tf.reduce_mean(tf.reduce_mean(self.sources_actions * qf1_W, axis=1) + qf1_b,
+    #                                      axis=-1, name="qf1")
+    #
+    #             with tf.variable_scope('qf2', reuse=reuse):
+    #                 qf2_h = mlp(qf_h, self.layers, self.activ_fn, layer_norm=self.layer_norm)
+    #                 qf2_W, qf2_b = self.get_aggregation_var(qf2_h, reuse, scope='master', bias_size=1)
+    #                 qf2 = tf.reduce_mean(tf.reduce_mean(self.sources_actions * qf2_W, axis=1) + qf2_b,
+    #                                      axis=-1, name="qf2")
+    #
+    #             self.qf1 = qf1
+    #             self.qf2 = qf2
+    #
+    #     return self.qf1, self.qf2, self.value_fn
 
 
 class StateIndependentAggregatePolicy(AggregatePolicy):
