@@ -34,6 +34,32 @@ ALGOS = {
 }
 
 
+def variable_summaries(var, name_scope='summaries', full_summary=False):
+    # inspired by https://jhui.github.io/2017/03/12/TensorBoard-visualize-your-learning/
+
+    with tf.name_scope(name_scope):
+        mean = tf.reduce_mean(var)
+        tf.summary.scalar('mean', mean)
+        with tf.name_scope('stddev'):
+            stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+        tf.summary.scalar('stddev', stddev)
+        tf.summary.scalar('max', tf.reduce_max(var))
+        tf.summary.scalar('min', tf.reduce_min(var))
+        tf.summary.histogram('histogram', var)
+
+    if full_summary:
+        shape = var.get_shape()
+        if len(shape) == 2:
+            for i in range(shape[-1]):
+                tf.summary.histogram(name_scope+'_action'+str(i), var[:, i])
+        elif len(shape) == 3:
+            for i in range(shape[-2]):
+                for j in range(shape[-1]):
+                    tf.summary.histogram(name_scope+'_source'+str(i)+'_action_'+str(j), var[:, i, j])
+        else:
+            raise Exception('full summary is not supported for the shape %s' % shape)
+
+
 class CustomDQNPolicy(DQNFeedForwardPolicy):
     def __init__(self, *args, **kwargs):
         super(CustomDQNPolicy, self).__init__(*args, **kwargs,
@@ -91,12 +117,14 @@ class AggregatePolicy(SACFeedForwardPolicy):
         self.n_batch = n_batch
         # override layers
         if layers is None:
-            self.layers = []
+            self.actor_layers = []
+        else:
+            self.actor_layers = layers
 
         sources_actions = []
         for ind, path in enumerate(source_policy_paths):
             # load the model
-            algo = path.split('/')[1]
+            algo = path.split('/')[1].split('_')[0]
             model = ALGOS[algo].load(path, verbose=1)
 
             def predict(obs):
@@ -129,6 +157,9 @@ class AggregatePolicy(SACFeedForwardPolicy):
                 W = tf.get_variable('scale', shape=[1, self.K, self.D],
                                     dtype=tf.float32, trainable=True, initializer=tf.ones_initializer)
 
+            variable_summaries(W, name_scope='W', full_summary=True)
+            variable_summaries(b, name_scope='b', full_summary=True)
+
         assert W.get_shape()[1:] == (self.K, self.D)
         assert b.get_shape()[1:] == (bias_size,)
 
@@ -140,20 +171,28 @@ class AggregatePolicy(SACFeedForwardPolicy):
 
         with tf.variable_scope(scope, reuse=reuse):
             pi_h = None
-            if len(self.layers) > 0 or self.feature_extraction == "cnn":
+            if len(self.actor_layers) > 0 or self.feature_extraction == "cnn":
                 if self.feature_extraction == "cnn":
                     pi_h = self.cnn_extractor(obs, **self.cnn_kwargs)
                 else:
                     pi_h = tf.layers.flatten(obs)
-                pi_h = mlp(pi_h, self.layers, self.activ_fn, layer_norm=self.layer_norm)
+                pi_h = mlp(pi_h, self.actor_layers, self.activ_fn, layer_norm=self.layer_norm)
 
             mu_W, mu_b = self.get_aggregation_var(pi_h, reuse, scope='master_mu', bias_size=self.D)
 
-            self.act_mu = mu_ = tf.reduce_mean(self.sources_actions * mu_W, axis=1) + mu_b
+            with tf.variable_scope('AggregatedActions_mu', reuse=reuse):
+                mu_agg = tf.reduce_mean(self.sources_actions * mu_W, axis=1)
+                variable_summaries(mu_agg)
+                self.act_mu = mu_ = mu_agg + mu_b
+
             # Important difference with SAC and other algo such as PPO:
             # the std depends on the state, so we cannot use stable_baselines.common.distribution
-            sd_W, sd_b = self.get_aggregation_var(pi_h, reuse, scope='master_sd', bias_size=self.D)
-            log_std = tf.reduce_mean(self.sources_actions * sd_W, axis=1) + sd_b
+            std_W, std_b = self.get_aggregation_var(pi_h, reuse, scope='master_std', bias_size=self.D)
+
+            with tf.variable_scope('AggregatedActions_std', reuse=reuse):
+                std_agg = tf.reduce_mean(self.sources_actions * std_W, axis=1)
+                variable_summaries(std_agg)
+                log_std = std_agg + std_b
 
         # OpenAI Variation to cap the standard deviation
         # activation = tf.tanh # for log_std
@@ -237,7 +276,28 @@ class StateIndependentAggregatePolicy(AggregatePolicy):
                                                               feature_extraction="mlp", **_kwargs)
 
 
+class StateDependentAggregatePolicy(AggregatePolicy):
+    """
+    Policy object that implements actor critic aggregation where aggregation in actor is state-dependent
+
+    :param sess: (TensorFlow session) The current TensorFlow session
+    :param ob_space: (Gym Space) The observation space of the environment
+    :param ac_space: (Gym Space) The action space of the environment
+    :param n_env: (int) The number of environments to run
+    :param n_steps: (int) The number of steps to run for each environment
+    :param n_batch: (int) The number of batch to run (n_envs * n_steps)
+    :param reuse: (bool) If the policy is reusable or not
+    :param _kwargs: (dict) Extra keyword arguments for source policies path and the nature CNN feature extraction
+    """
+
+    def __init__(self, sess, ob_space, ac_space, n_env=1, n_steps=1, n_batch=None, reuse=False, **_kwargs):
+
+        super(StateDependentAggregatePolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse,
+                                                            layers=[64, 64], feature_extraction="mlp", **_kwargs)
+
+
 register_policy('StateIndependentAggregatePolicy', StateIndependentAggregatePolicy)
+register_policy('StateDependentAggregatePolicy', StateDependentAggregatePolicy)
 register_policy('CustomSACPolicy', CustomSACPolicy)
 register_policy('CustomDQNPolicy', CustomDQNPolicy)
 register_policy('CustomMlpPolicy', CustomMlpPolicy)
