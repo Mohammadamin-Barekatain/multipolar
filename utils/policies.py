@@ -8,15 +8,13 @@ Small parts of this script has been copied from https://github.com/hill-a/stable
 from stable_baselines.common import tf_util
 import tensorflow as tf
 from stable_baselines import PPO2, A2C, ACER, ACKTR, DQN, DDPG, SAC
-from stable_baselines.common.input import observation_input
 from stable_baselines.common.policies import nature_cnn
 from stable_baselines.common.policies import register_policy
 from stable_baselines.common.policies import FeedForwardPolicy as BasePolicy
 from stable_baselines.deepq.policies import FeedForwardPolicy as DQNFeedForwardPolicy
 from stable_baselines.sac.policies import FeedForwardPolicy as SACFeedForwardPolicy
 from stable_baselines.sac.policies import mlp, gaussian_likelihood, gaussian_entropy, apply_squashing_func
-from stable_baselines.a2c.utils import find_trainable_variables
-import numpy as np
+
 
 EPS = 1e-6  # Avoid NaN (prevents division by zero or log of zero)
 # CAP the standard deviation of the actor
@@ -116,10 +114,7 @@ class AggregatePolicy(SACFeedForwardPolicy):
         self.D = self.ac_space.shape[0]
         self.n_batch = n_batch
         # override layers
-        if layers is None:
-            self.actor_layers = []
-        else:
-            self.actor_layers = layers
+        self.state_dependant_master = (layers is not None)
 
         sources_actions = []
         for ind, path in enumerate(source_policy_paths):
@@ -142,11 +137,11 @@ class AggregatePolicy(SACFeedForwardPolicy):
         assert sources_actions.get_shape()[1:] == (self.K, self.D)
         self.sources_actions = sources_actions
 
-    def get_aggregation_var(self, pi_h, reuse, scope, bias_size):
+    def get_aggregation_var(self, master_in, reuse, scope, bias_size):
         with tf.variable_scope(scope, reuse=reuse):
-            if pi_h is not None:
-                pi_h = tf.layers.dense(pi_h, self.D * self.K + bias_size, activation=None)
-                W, b = tf.split(pi_h, [self.D * self.K, bias_size], -1)
+            if master_in is not None:
+                master_in = tf.layers.dense(master_in, self.D * self.K + bias_size, activation=None)
+                W, b = tf.split(master_in, [self.D * self.K, bias_size], -1)
 
                 b = tf.identity(b, name='bias')
                 W = tf.reshape(W, shape=[-1, self.K, self.D], name='scale')
@@ -170,29 +165,24 @@ class AggregatePolicy(SACFeedForwardPolicy):
             obs = self.processed_obs
 
         with tf.variable_scope(scope, reuse=reuse):
-            pi_h = None
-            if len(self.actor_layers) > 0 or self.feature_extraction == "cnn":
-                if self.feature_extraction == "cnn":
-                    pi_h = self.cnn_extractor(obs, **self.cnn_kwargs)
-                else:
-                    pi_h = tf.layers.flatten(obs)
-                pi_h = mlp(pi_h, self.actor_layers, self.activ_fn, layer_norm=self.layer_norm)
+            if self.feature_extraction == "cnn":
+                pi_h = self.cnn_extractor(obs, **self.cnn_kwargs)
+            else:
+                pi_h = tf.layers.flatten(obs)
 
-            mu_W, mu_b = self.get_aggregation_var(pi_h, reuse, scope='master_mu', bias_size=self.D)
+            pi_h = mlp(pi_h, self.layers, self.activ_fn, layer_norm=self.layer_norm)
 
-            with tf.variable_scope('AggregatedActions_mu', reuse=reuse):
-                mu_agg = tf.reduce_mean(self.sources_actions * mu_W, axis=1)
-                variable_summaries(mu_agg)
-                self.act_mu = mu_ = mu_agg + mu_b
+            master_in = pi_h if self.state_dependant_master else None
+            master_W, master_b = self.get_aggregation_var(master_in, reuse, scope='master', bias_size=self.D)
+
+            mu_agg = tf.reduce_mean(self.sources_actions * master_W, axis=1, name='aggregated_actions')
+            variable_summaries(mu_agg)
+            self.act_mu = mu_ = tf.add(mu_agg, master_b, name='mu')
+            variable_summaries(mu_)
 
             # Important difference with SAC and other algo such as PPO:
             # the std depends on the state, so we cannot use stable_baselines.common.distribution
-            std_W, std_b = self.get_aggregation_var(pi_h, reuse, scope='master_std', bias_size=self.D)
-
-            with tf.variable_scope('AggregatedActions_std', reuse=reuse):
-                std_agg = tf.reduce_mean(self.sources_actions * std_W, axis=1)
-                variable_summaries(std_agg)
-                log_std = std_agg + std_b
+            log_std = tf.layers.dense(pi_h, self.ac_space.shape[0], activation=None, name='log_std')
 
         # OpenAI Variation to cap the standard deviation
         # activation = tf.tanh # for log_std

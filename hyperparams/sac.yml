@@ -17,9 +17,13 @@ Pendulum-v0:
 
 LunarLanderContinuous-v2:
   n_timesteps: !!float 5e5
-  policy: 'MlpPolicy'
+  policy:  'StateDependentAggregatePolicy' #'StateIndependentAggregatePolicy'   #  'MlpPolicy'
   batch_size: 256
   learning_starts: 1000
+  policy_kwargs: {'source_policy_paths': ['logs/sac_back/LunarLanderContinuous-v2_13-40_1/LunarLanderContinuous-v2.pkl',
+                                          'logs/sac_back/LunarLanderContinuous-v2_13-30_1/LunarLanderContinuous-v2.pkl',
+                                          'logs/sac_back/LunarLanderContinuous-v2_33-40_1/LunarLanderContinuous-v2.pkl',
+                                          'logs/sac_back/LunarLanderContinuous-v2_33-30_1/LunarLanderContinuous-v2.pkl']}
 
 BipedalWalker-v2:
   n_timesteps: !!float 1e6
