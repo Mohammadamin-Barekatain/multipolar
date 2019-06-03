@@ -5,15 +5,21 @@ Affiliation: TUM & OSX
 Small parts of this script has been copied from https://github.com/hill-a/stable-baselines
 """
 
+#ToDo: enable tensorboard summary for mlap-ppo, by disabling the aggregation summary
+#ToDo: fix the bug for SDW=False case
+
 from stable_baselines.common import tf_util
 import tensorflow as tf
 from stable_baselines import PPO2, A2C, ACER, ACKTR, DQN, DDPG, SAC
-from stable_baselines.common.policies import nature_cnn
-from stable_baselines.common.policies import register_policy
-from stable_baselines.common.policies import FeedForwardPolicy as BasePolicy
+from stable_baselines.common.policies import nature_cnn, register_policy
 from stable_baselines.deepq.policies import FeedForwardPolicy as DQNFeedForwardPolicy
 from stable_baselines.sac.policies import FeedForwardPolicy as SACFeedForwardPolicy
+from stable_baselines.common.policies import FeedForwardPolicy, ActorCriticPolicy, mlp_extractor
 from stable_baselines.sac.policies import mlp, gaussian_likelihood, gaussian_entropy, apply_squashing_func
+from stable_baselines.a2c.utils import linear
+from .distributions import make_mlap_proba_dist_type
+import warnings
+from .aggregation import get_aggregation_var, affine_transformation
 
 
 EPS = 1e-6  # Avoid NaN (prevents division by zero or log of zero)
@@ -28,34 +34,54 @@ ALGOS = {
     'dqn': DQN,
     'ddpg': DDPG,
     'sac': SAC,
-    'ppo2': PPO2
+    'ppo2': PPO2,
+    'mlap-ppo2': PPO2,
+    'mlap-sac': SAC
 }
 
 
-def variable_summaries(var, name_scope='summaries', full_summary=False):
-    # inspired by https://jhui.github.io/2017/03/12/TensorBoard-visualize-your-learning/
+def get_sources_actions(obs_ph, source_policy_paths, n_batch, n_actions):
+    sources_actions = []
+    for ind, path in enumerate(source_policy_paths):
+        # load the model
+        algo = path.split('/')[1].split('_')[0]
+        model = ALGOS[algo].load(path, verbose=1)
 
-    with tf.name_scope(name_scope):
-        mean = tf.reduce_mean(var)
-        tf.summary.scalar('mean', mean)
-        with tf.name_scope('stddev'):
-            stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-        tf.summary.scalar('stddev', stddev)
-        tf.summary.scalar('max', tf.reduce_max(var))
-        tf.summary.scalar('min', tf.reduce_min(var))
-        tf.summary.histogram('histogram', var)
+        def predict(obs):
+            return model.policy_tf.step(obs, deterministic=True)
 
-    if full_summary:
-        shape = var.get_shape()
-        if len(shape) == 2:
-            for i in range(shape[-1]):
-                tf.summary.histogram(name_scope+'_action'+str(i), var[:, i])
-        elif len(shape) == 3:
-            for i in range(shape[-2]):
-                for j in range(shape[-1]):
-                    tf.summary.histogram(name_scope+'_source'+str(i)+'_action_'+str(j), var[:, i, j])
-        else:
-            raise Exception('full summary is not supported for the shape %s' % shape)
+        action = tf.py_func(predict, [obs_ph], tf.float32, name='source_actions' + str(ind))
+
+        action.set_shape((n_batch, n_actions))
+        action = tf.stop_gradient(action)
+
+        sources_actions.append(action)
+
+    sources_actions = tf.stack(sources_actions)  # shape = K x batch x D
+    sources_actions = tf.transpose(sources_actions, perm=[1, 0, 2], name='sources_actions')  # shape = batch x K x D
+
+    assert sources_actions.get_shape()[1:] == (len(source_policy_paths), n_actions)
+
+    return sources_actions
+
+
+def get_master_config(kwargs):
+
+    assert 'source_policy_paths' in kwargs, 'path to source policies is not provided.'
+    assert 'SDW' in kwargs, 'state dependency of scales is not specified'
+    assert 'no_bias' in kwargs, 'inclusion of bias is not specified'
+    assert isinstance(kwargs['no_bias'], bool), '\'no_bias\' must be bool'
+    assert isinstance(kwargs['SDW'], bool), '\'SDW\' must be bool'
+
+    source_policy_paths = kwargs['source_policy_paths']
+    SDW = kwargs['SDW']
+    no_bias = kwargs['no_bias']
+
+    del kwargs['source_policy_paths']
+    del kwargs['SDW']
+    del kwargs['no_bias']
+
+    return source_policy_paths, SDW, no_bias
 
 
 class CustomDQNPolicy(DQNFeedForwardPolicy):
@@ -66,7 +92,7 @@ class CustomDQNPolicy(DQNFeedForwardPolicy):
                                               feature_extraction="mlp")
 
 
-class CustomMlpPolicy(BasePolicy):
+class CustomMlpPolicy(FeedForwardPolicy):
     def __init__(self, *args, **kwargs):
         super(CustomMlpPolicy, self).__init__(*args, **kwargs,
                                               layers=[16],
@@ -80,7 +106,87 @@ class CustomSACPolicy(SACFeedForwardPolicy):
                                               feature_extraction="mlp")
 
 
-class AggregatePolicy(SACFeedForwardPolicy):
+class AggregatePolicy(ActorCriticPolicy):
+    """
+    Policy object that implements actor critic, by aggregating a set of source policies using a master model.
+
+    :param sess: (TensorFlow session) The current TensorFlow session
+    :param ob_space: (Gym Space) The observation space of the environment
+    :param ac_space: (Gym Space) The action space of the environment
+    :param n_env: (int) The number of environments to run
+    :param n_steps: (int) The number of steps to run for each environment
+    :param n_batch: (int) The number of batch to run (n_envs * n_steps)
+    :param reuse: (bool) If the policy is reusable or not
+    :param layers: ([int]) (deprecated, use net_arch instead) The size of the Neural network for the master model
+        (if None, default to [64, 64])
+    :param net_arch: (list) Specification of the actor-critic policy network architecture  for master model
+        (see mlp_extractordocumentation for details).
+    :param act_fun: (tf.func) the activation function to use in the neural network.
+    :param cnn_extractor: (function (TensorFlow Tensor, ``**kwargs``): (TensorFlow Tensor)) the CNN feature extraction
+    :param feature_extraction: (str) The feature extraction type ("cnn" or "mlp")
+    :param kwargs: (dict) Extra keyword arguments for source policies path and the nature CNN feature extraction
+    """
+
+    def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False, layers=None, net_arch=None,
+                 act_fun=tf.tanh, cnn_extractor=nature_cnn, feature_extraction="cnn", **kwargs):
+
+        source_policy_paths, SDW, no_bias = get_master_config(kwargs)
+
+        super(AggregatePolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=reuse,
+                                              scale=(feature_extraction == "cnn"))
+
+        n_actions = self.ac_space.shape[0]
+        sources_actions = get_sources_actions(self.obs_ph, source_policy_paths, n_batch, n_actions)
+        self.pdtype = make_mlap_proba_dist_type(ac_space, sources_actions, no_bias, summary=reuse)
+
+        self._kwargs_check(feature_extraction, kwargs)
+
+        if layers is not None:
+            warnings.warn("Usage of the `layers` parameter is deprecated! Use net_arch instead "
+                          "(it has a different semantics though).", DeprecationWarning)
+            if net_arch is not None:
+                warnings.warn("The new `net_arch` parameter overrides the deprecated `layers` parameter!",
+                              DeprecationWarning)
+
+        if net_arch is None:
+            if layers is None:
+                layers = [64, 64]
+            net_arch = [dict(vf=layers, pi=layers)]
+
+        with tf.variable_scope("model", reuse=reuse):
+            if feature_extraction == "cnn":
+                pi_latent = vf_latent = cnn_extractor(self.processed_obs, **kwargs)
+            else:
+                pi_latent, vf_latent = mlp_extractor(tf.layers.flatten(self.processed_obs), net_arch, act_fun)
+
+            self.value_fn = linear(vf_latent, 'vf', 1)
+
+            if not SDW:
+                pi_latent = None
+
+            self.proba_distribution, self.policy, self.q_value = \
+                self.pdtype.proba_distribution_from_latent(pi_latent, vf_latent, init_scale=0.01)
+
+        self.initial_state = None
+        self._setup_init()
+
+    def step(self, obs, state=None, mask=None, deterministic=False):
+        if deterministic:
+            action, value, neglogp = self.sess.run([self.deterministic_action, self._value, self.neglogp],
+                                                   {self.obs_ph: obs})
+        else:
+            action, value, neglogp = self.sess.run([self.action, self._value, self.neglogp],
+                                                   {self.obs_ph: obs})
+        return action, value, self.initial_state, neglogp
+
+    def proba_step(self, obs, state=None, mask=None):
+        return self.sess.run(self.policy_proba, {self.obs_ph: obs})
+
+    def value(self, obs, state=None, mask=None):
+        return self.sess.run(self._value, {self.obs_ph: obs})
+
+
+class SACAggregatePolicy(SACFeedForwardPolicy):
     """
     Policy object that implements a DDPG-like actor critic, by aggregating a set of source policies using a master model.
 
@@ -91,7 +197,7 @@ class AggregatePolicy(SACFeedForwardPolicy):
     :param n_steps: (int) The number of steps to run for each environment
     :param n_batch: (int) The number of batch to run (n_envs * n_steps)
     :param reuse: (bool) If the policy is reusable or not
-    :param layers: ([int]) The size of the Neural network for the master model (if None, state-independent master model)
+    :param layers: ([int]) The size of the Neural network for the master model
     :param cnn_extractor: (function (TensorFlow Tensor, ``**kwargs``): (TensorFlow Tensor)) the CNN feature extraction
     :param feature_extraction: (str) The feature extraction type ("cnn" or "mlp")
     :param layer_norm: (bool) enable layer normalisation
@@ -102,63 +208,15 @@ class AggregatePolicy(SACFeedForwardPolicy):
     def __init__(self, sess, ob_space, ac_space, n_env=1, n_steps=1, n_batch=None, reuse=False, layers=None,
                  cnn_extractor=nature_cnn, feature_extraction="cnn", layer_norm=False, act_fun=tf.nn.relu, **kwargs):
 
-        assert 'source_policy_paths' in kwargs, 'path to source policies is not provided.'
-        source_policy_paths = kwargs['source_policy_paths']
-        del kwargs['source_policy_paths']
+        source_policy_paths, self.SDW, self.no_bias = get_master_config(kwargs)
 
-        super(AggregatePolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=reuse,
-                                              layers=layers, cnn_extractor=cnn_extractor, layer_norm=layer_norm,
-                                              feature_extraction=feature_extraction, act_fun=act_fun, **kwargs)
+        super(SACAggregatePolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=reuse,
+                                                 layers=layers, cnn_extractor=cnn_extractor, layer_norm=layer_norm,
+                                                 feature_extraction=feature_extraction, act_fun=act_fun, **kwargs)
 
-        self.K = len(source_policy_paths)
-        self.D = self.ac_space.shape[0]
-        self.n_batch = n_batch
-        # override layers
-        self.state_dependant_master = (layers is not None)
-
-        sources_actions = []
-        for ind, path in enumerate(source_policy_paths):
-            # load the model
-            algo = path.split('/')[1].split('_')[0]
-            model = ALGOS[algo].load(path, verbose=1)
-
-            def predict(obs):
-                return model.policy_tf.step(obs, deterministic=True)
-            action = tf.py_func(predict, [self.obs_ph], tf.float32, name='source_action' + str(ind))
-
-            action.set_shape((self.n_batch, self.D))
-            action = tf.stop_gradient(action)
-
-            sources_actions.append(action)
-
-        sources_actions = tf.stack(sources_actions)  # shape = K x batch x D
-        sources_actions = tf.transpose(sources_actions, perm=[1, 0, 2], name='source_actions')  # shape = batch x K x D
-
-        assert sources_actions.get_shape()[1:] == (self.K, self.D)
-        self.sources_actions = sources_actions
-
-    def get_aggregation_var(self, master_in, reuse, scope, bias_size):
-        with tf.variable_scope(scope, reuse=reuse):
-            if master_in is not None:
-                master_in = tf.layers.dense(master_in, self.D * self.K + bias_size, activation=None)
-                W, b = tf.split(master_in, [self.D * self.K, bias_size], -1)
-
-                b = tf.identity(b, name='bias')
-                W = tf.reshape(W, shape=[-1, self.K, self.D], name='scale')
-
-            else:
-                b = tf.get_variable('bias', shape=[1, bias_size],
-                                    dtype=tf.float32, trainable=True, initializer=tf.zeros_initializer)
-                W = tf.get_variable('scale', shape=[1, self.K, self.D],
-                                    dtype=tf.float32, trainable=True, initializer=tf.ones_initializer)
-
-            variable_summaries(W, name_scope='W', full_summary=True)
-            variable_summaries(b, name_scope='b', full_summary=True)
-
-        assert W.get_shape()[1:] == (self.K, self.D)
-        assert b.get_shape()[1:] == (bias_size,)
-
-        return W, b
+        self.n_sources = len(source_policy_paths)
+        self.n_actions = self.ac_space.shape[0]
+        self.sources_actions = get_sources_actions(self.obs_ph, source_policy_paths, n_batch, self.n_actions)
 
     def make_actor(self, obs=None, reuse=False, scope="pi"):
         if obs is None:
@@ -172,13 +230,11 @@ class AggregatePolicy(SACFeedForwardPolicy):
 
             pi_h = mlp(pi_h, self.layers, self.activ_fn, layer_norm=self.layer_norm)
 
-            master_in = pi_h if self.state_dependant_master else None
-            master_W, master_b = self.get_aggregation_var(master_in, reuse, scope='master', bias_size=self.D)
+            master_in = pi_h if self.SDW else None
+            master_W, master_b = get_aggregation_var(master_in, name_scope='master', n_sources=self.n_sources,
+                                                     n_actions=self.n_actions, no_bias=self.no_bias)
 
-            mu_agg = tf.reduce_mean(self.sources_actions * master_W, axis=1, name='aggregated_actions')
-            variable_summaries(mu_agg)
-            self.act_mu = mu_ = tf.add(mu_agg, master_b, name='mu')
-            variable_summaries(mu_)
+            self.act_mu = mu_ = affine_transformation(self.sources_actions, master_W, master_b)
 
             # Important difference with SAC and other algo such as PPO:
             # the std depends on the state, so we cannot use stable_baselines.common.distribution
@@ -203,52 +259,10 @@ class AggregatePolicy(SACFeedForwardPolicy):
 
         return deterministic_policy, policy, logp_pi
 
-    # def make_critics(self, obs=None, action=None, reuse=False, scope="values_fn", create_vf=True, create_qf=True):
-    #     if obs is None:
-    #         obs = self.processed_obs
-    #
-    #     with tf.variable_scope(scope, reuse=reuse):
-    #
-    #         if self.feature_extraction == "cnn":
-    #             critics_h = self.cnn_extractor(obs, **self.cnn_kwargs)
-    #         else:
-    #             critics_h = tf.layers.flatten(obs)
-    #
-    #         if create_vf:
-    #             # Value function
-    #             with tf.variable_scope('vf', reuse=reuse):
-    #                 vf_h = mlp(critics_h, self.layers, self.activ_fn, layer_norm=self.layer_norm)
-    #                 vf_W, vf_b = self.get_aggregation_var(vf_h, reuse, scope='master', bias_size=1)
-    #                 value_fn = tf.reduce_mean(tf.reduce_mean(self.sources_actions * vf_W, axis=1) + vf_b,
-    #                                           axis=-1, name='vf')
-    #             self.value_fn = value_fn
-    #
-    #         if create_qf:
-    #             # Concatenate preprocessed state and action
-    #             qf_h = tf.concat([critics_h, action], axis=-1)
-    #
-    #             # Double Q values to reduce overestimation
-    #             with tf.variable_scope('qf1', reuse=reuse):
-    #                 qf1_h = mlp(qf_h, self.layers, self.activ_fn, layer_norm=self.layer_norm)
-    #                 qf1_W, qf1_b = self.get_aggregation_var(qf1_h, reuse, scope='master', bias_size=1)
-    #                 qf1 = tf.reduce_mean(tf.reduce_mean(self.sources_actions * qf1_W, axis=1) + qf1_b,
-    #                                      axis=-1, name="qf1")
-    #
-    #             with tf.variable_scope('qf2', reuse=reuse):
-    #                 qf2_h = mlp(qf_h, self.layers, self.activ_fn, layer_norm=self.layer_norm)
-    #                 qf2_W, qf2_b = self.get_aggregation_var(qf2_h, reuse, scope='master', bias_size=1)
-    #                 qf2 = tf.reduce_mean(tf.reduce_mean(self.sources_actions * qf2_W, axis=1) + qf2_b,
-    #                                      axis=-1, name="qf2")
-    #
-    #             self.qf1 = qf1
-    #             self.qf2 = qf2
-    #
-    #     return self.qf1, self.qf2, self.value_fn
 
-
-class StateIndependentAggregatePolicy(AggregatePolicy):
+class SACMlpAggregatePolicy(SACAggregatePolicy):
     """
-    Policy object that implements actor critic aggregation where aggregation in actor is state-independent
+    Policy object that implements DDPG-like actor critic aggregation, using a MLP (2 layers of 64) in master model
 
     :param sess: (TensorFlow session) The current TensorFlow session
     :param ob_space: (Gym Space) The observation space of the environment
@@ -262,13 +276,13 @@ class StateIndependentAggregatePolicy(AggregatePolicy):
 
     def __init__(self, sess, ob_space, ac_space, n_env=1, n_steps=1, n_batch=None, reuse=False, **_kwargs):
 
-        super(StateIndependentAggregatePolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse,
-                                                              feature_extraction="mlp", **_kwargs)
+        super(SACMlpAggregatePolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch,
+                                                    reuse, feature_extraction="mlp", **_kwargs)
 
 
-class StateDependentAggregatePolicy(AggregatePolicy):
+class MlpAggregatePolicy(AggregatePolicy):
     """
-    Policy object that implements actor critic aggregation where aggregation in actor is state-dependent
+    Policy object that implements actor critic aggregation, using a MLP (2 layers of 64) in master model
 
     :param sess: (TensorFlow session) The current TensorFlow session
     :param ob_space: (Gym Space) The observation space of the environment
@@ -277,17 +291,16 @@ class StateDependentAggregatePolicy(AggregatePolicy):
     :param n_steps: (int) The number of steps to run for each environment
     :param n_batch: (int) The number of batch to run (n_envs * n_steps)
     :param reuse: (bool) If the policy is reusable or not
-    :param _kwargs: (dict) Extra keyword arguments for source policies path and the nature CNN feature extraction
+    :param _kwargs: (dict) Extra keyword arguments for the nature CNN feature extraction
     """
 
-    def __init__(self, sess, ob_space, ac_space, n_env=1, n_steps=1, n_batch=None, reuse=False, **_kwargs):
+    def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False, **_kwargs):
+        super(MlpAggregatePolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse,
+                                                 feature_extraction="mlp", **_kwargs)
 
-        super(StateDependentAggregatePolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse,
-                                                            layers=[64, 64], feature_extraction="mlp", **_kwargs)
 
-
-register_policy('StateIndependentAggregatePolicy', StateIndependentAggregatePolicy)
-register_policy('StateDependentAggregatePolicy', StateDependentAggregatePolicy)
+register_policy('SACMlpAggregatePolicy', SACMlpAggregatePolicy)
+register_policy('MlpAggregatePolicy', MlpAggregatePolicy)
 register_policy('CustomSACPolicy', CustomSACPolicy)
 register_policy('CustomDQNPolicy', CustomDQNPolicy)
 register_policy('CustomMlpPolicy', CustomMlpPolicy)
