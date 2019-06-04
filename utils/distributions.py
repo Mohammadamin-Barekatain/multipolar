@@ -18,7 +18,7 @@ from .aggregation import get_aggregation_var, affine_transformation
 
 
 class DiagGaussianProbabilityDistributionType(ProbabilityDistributionType):
-    def __init__(self, size, sources_actions, no_bias, summary):
+    def __init__(self, size, sources_actions, no_bias, SDW, summary):
         """
         The probability distribution type for multivariate gaussian input
 
@@ -30,6 +30,7 @@ class DiagGaussianProbabilityDistributionType(ProbabilityDistributionType):
         self.sources_actions = sources_actions
         self.no_bias = no_bias
         self.summary = summary
+        self.SDW=SDW
 
     def probability_distribution_class(self):
         return DiagGaussianProbabilityDistribution
@@ -47,7 +48,8 @@ class DiagGaussianProbabilityDistributionType(ProbabilityDistributionType):
 
         master_W, master_b = get_aggregation_var(pi_latent_vector, 'master', self.sources_actions.get_shape()[1],
                                                  self.sources_actions.get_shape()[2], no_bias=self.no_bias,
-                                                 bias_layer_initializer=ortho_init(init_scale), summary=self.summary)
+                                                 SDW=self.SDW, bias_layer_initializer=ortho_init(init_scale),
+                                                 summary=self.summary)
         mean = affine_transformation(self.sources_actions, master_W, master_b, summary=self.summary)
 
         logstd = tf.get_variable(name='pi/logstd', shape=[1, self.size], initializer=tf.zeros_initializer())
@@ -66,7 +68,7 @@ class DiagGaussianProbabilityDistributionType(ProbabilityDistributionType):
         return tf.float32
 
 
-def make_mlap_proba_dist_type(ac_space, sources_actions, no_bias, summary):
+def make_mlap_proba_dist_type(ac_space, sources_actions, no_bias, SDW, summary):
     """
     return an instance of ProbabilityDistributionType for the correct type of action space
 
@@ -78,7 +80,7 @@ def make_mlap_proba_dist_type(ac_space, sources_actions, no_bias, summary):
     """
     if isinstance(ac_space, spaces.Box):
         assert len(ac_space.shape) == 1, "Error: the action space must be a vector"
-        return DiagGaussianProbabilityDistributionType(ac_space.shape[0], sources_actions, no_bias, summary)
+        return DiagGaussianProbabilityDistributionType(ac_space.shape[0], sources_actions, no_bias, SDW, summary)
     elif isinstance(ac_space, spaces.Discrete):
         raise NotImplementedError('probability distribution, not implemented for Discrete action space')
         # return CategoricalProbabilityDistributionType(ac_space.n)

@@ -31,9 +31,10 @@ def variable_summaries(var, name_scope='summaries', full_summary=False):
             raise Exception('full summary is not supported for the shape %s' % shape)
 
 
-def get_aggregation_var(master_in, name_scope, n_sources, n_actions, no_bias, bias_layer_initializer=None, summary=True):
+def get_aggregation_var(master_in, name_scope, n_sources, n_actions, no_bias, SDW, bias_layer_initializer=None,
+                        summary=True):
     with tf.name_scope(name_scope):
-        if master_in is not None:
+        if SDW:
             W = tf.layers.dense(master_in, n_sources * n_actions, activation=None)
             W = tf.reshape(W, shape=[-1, n_sources, n_actions], name='scale')
         else:

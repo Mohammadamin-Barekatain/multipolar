@@ -13,6 +13,6 @@ LunarLanderContinuous-v2:
                                           'logs/sac_scratch/LunarLanderContinuous-v2_13-30_1/LunarLanderContinuous-v2.pkl',
                                           'logs/sac_scratch/LunarLanderContinuous-v2_33-40_1/LunarLanderContinuous-v2.pkl',
                                           'logs/sac_scratch/LunarLanderContinuous-v2_33-30_1/LunarLanderContinuous-v2.pkl'],
-                  'SDW': True,
-                  'no_bias': True}
+                  'SDW': False,
+                  'no_bias': False}
 
