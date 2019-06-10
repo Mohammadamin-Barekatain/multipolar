@@ -85,9 +85,8 @@ class VideoRecorder(Callback):
                               env_params=env_params)
         env.reset()
 
-        self.env = VecVideoRecorder(env, test_path,
-                               record_video_trigger=lambda x: x == 0, video_length=video_length,
-                               name_prefix=name_prefix)
+        self.env = VecVideoRecorder(env, test_path, record_video_trigger=lambda x: x == 0, video_length=video_length,
+                                    name_prefix=name_prefix)
 
 
     def callback(self, _locals, _globals):

@@ -9,5 +9,5 @@ LunarLanderContinuous-v2:
                                           'logs/sac_scratch/LunarLanderContinuous-v2_33-40_1/LunarLanderContinuous-v2.pkl',
                                           'logs/sac_scratch/LunarLanderContinuous-v2_33-30_1/LunarLanderContinuous-v2.pkl'],
                   'SDW': False,
-                  'no_bias': True}
+                  'no_bias': False}
 

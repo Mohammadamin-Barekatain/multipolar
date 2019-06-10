@@ -27,7 +27,7 @@ from utils import make_env, linear_schedule, get_latest_run_id, load_group_resul
 from utils.callbacks import VideoRecorder
 from utils.plot import plot_results
 from utils.policies import ALGOS
-from utils.wrappers import ModifyEnvParams
+from utils.wrappers import modify_env_params
 
 parser = argparse.ArgumentParser(description='Any extra args will be used for modifying environment dynamics')
 parser.add_argument('--env', type=str, default="CartPole-v1", help='environment ID')
@@ -47,7 +47,6 @@ parser.add_argument('-f', '--log-folder', help='Log folder', type=str, default='
 parser.add_argument('--no-monitor', help='do not monitor training', action='store_true', default=False)
 parser.add_argument('--no-tensorboard', help='do not create tensorboard', action='store_true', default=False)
 parser.add_argument('--no-plot', help='do not plot the results', action='store_true', default=False)
-# ToDo: get path for loading a spesific hyperparams.
 # ToDo: add saving to wandb
 # ToDo: support changing environments for Atari
 args, env_params = parser.parse_known_args()
@@ -152,15 +151,15 @@ elif args.algo in ['dqn', 'ddpg']:
         print("WARNING: normalization not supported yet for DDPG/DQN")
     env = gym.make(env_id)
     if len(env_params) > 0:
-        env = ModifyEnvParams(env, **env_params)
+        env = modify_env_params(env, params_path, **env_params)
     env.seed(args.seed)
     if not args.no_monitor:
         env = Monitor(env, monitor_log, allow_early_resets=True)
 else:
     if n_envs == 1:
-        env = DummyVecEnv([make_env(env_id, 0, args.seed, monitor_log, env_params)])
+        env = DummyVecEnv([make_env(env_id, 0, args.seed, monitor_log, env_params, params_path)])
     else:
-        env = SubprocVecEnv([make_env(env_id, i, args.seed, monitor_log, env_params) for i in range(n_envs)])
+        env = SubprocVecEnv([make_env(env_id, i, args.seed, monitor_log, env_params, params_path) for i in range(n_envs)])
     if normalize:
         print("Normalizing input and return")
         env = VecNormalize(env, **normalize_kwargs)

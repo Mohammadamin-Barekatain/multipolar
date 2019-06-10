@@ -14,6 +14,7 @@ import time
 from collections import namedtuple
 
 import gym
+import roboschool
 import pandas
 import yaml
 from gym.envs.registration import load
@@ -26,10 +27,10 @@ from stable_baselines.results_plotter import load_results
 # Do not remove the unused import below
 from utils.policies import CustomSACPolicy, CustomDQNPolicy, CustomMlpPolicy
 
-from utils.wrappers import ModifyEnvParams
+from utils.wrappers import modify_env_params
 
 
-def make_env(env_id, rank=0, seed=0, log_dir=None, env_params={}):
+def make_env(env_id, rank=0, seed=0, log_dir=None, env_params={}, params_path=None):
     """
     Helper function to multiprocess training
     and log the progress.
@@ -47,7 +48,7 @@ def make_env(env_id, rank=0, seed=0, log_dir=None, env_params={}):
         set_global_seeds(seed + rank)
         env = gym.make(env_id)
         if len(env_params) > 0:
-            env = ModifyEnvParams(env, **env_params)
+            env = modify_env_params(env, params_path, **env_params)
         env.seed(seed + rank)
         env = Monitor(env, os.path.join(log_dir, str(rank)), allow_early_resets=True)
         return env
@@ -56,7 +57,7 @@ def make_env(env_id, rank=0, seed=0, log_dir=None, env_params={}):
 
 
 def create_test_env(env_id, n_envs=1, stats_path=None, seed=0, log_dir=None, should_render=True, hyperparams=None,
-                    env_params={}):
+                    env_params=None):
     """
     Create environment for testing a trained agent
 
@@ -92,7 +93,7 @@ def create_test_env(env_id, n_envs=1, stats_path=None, seed=0, log_dir=None, sho
         # Frame-stacking with 4 frames
         env = VecFrameStack(env, n_stack=4)
     elif n_envs > 1:
-        env = SubprocVecEnv([make_env(env_id, i, seed, log_dir, env_params) for i in range(n_envs)])
+        env = SubprocVecEnv([make_env(env_id, i, seed, log_dir, env_params, stats_path) for i in range(n_envs)])
     # Pybullet envs does not follow gym.render() interface
     elif "Bullet" in env_id:
         spec = gym.envs.registry.env_specs[env_id]
@@ -113,18 +114,18 @@ def create_test_env(env_id, n_envs=1, stats_path=None, seed=0, log_dir=None, sho
             # TODO: fix for pybullet locomotion envs
             env = class_(**{**spec._kwargs}, **{render_name: should_render})
             if len(env_params) > 0:
-                env = ModifyEnvParams(env, **env_params)
+                env = modify_env_params(env, stats_path, **env_params)
             env.seed(0)
             if log_dir is not None:
                 env = Monitor(env, os.path.join(log_dir, "0"), allow_early_resets=True)
             return env
 
         if use_subproc:
-            env = SubprocVecEnv([make_env(env_id, 0, seed, log_dir, env_params)])
+            env = SubprocVecEnv([make_env(env_id, 0, seed, log_dir, env_params, stats_path)])
         else:
             env = DummyVecEnv([_init])
     else:
-        env = DummyVecEnv([make_env(env_id, 0, seed, log_dir, env_params)])
+        env = DummyVecEnv([make_env(env_id, 0, seed, log_dir, env_params, stats_path)])
 
     # Load saved stats for normalizing input and rewards
     # And optionally stack frames
