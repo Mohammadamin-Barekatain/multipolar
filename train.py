@@ -252,7 +252,7 @@ if args.play > 0:
     env.reset()
 
     env = VecVideoRecorder(env, test_path, record_video_trigger=lambda x: x == 0, video_length=args.play,
-                           name_prefix="{}-{}-final".format(args.algo, env_id))
+                           name_prefix="{}-{}-{}-final".format(exp_name, args.algo, env_id))
 
     obs = env.reset()
     for _ in range(args.play + 1):
