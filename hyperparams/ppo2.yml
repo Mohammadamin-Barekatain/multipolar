@@ -267,7 +267,7 @@ InvertedPendulumSwingupBulletEnv-v0:
 RoboschoolHopper-v1:
   normalize: true
   n_envs: 8
-  n_timesteps: !!float 1e8
+  n_timesteps: !!float 5e6
   policy: 'MlpPolicy'
   n_steps: 2048
   nminibatches: 128
