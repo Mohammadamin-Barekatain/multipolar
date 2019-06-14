@@ -5,8 +5,7 @@ Affiliation: TUM & OSX
 Small parts of this script has been copied from https://github.com/hill-a/stable-baselines
 """
 
-#ToDo: enable tensorboard summary for mlap-ppo, by disabling the aggregation summary
-#ToDo: fix the bug for SDW=False case
+#ToDo: reduce tensorboard summary for mlap-sac and mlap-ppo
 
 from stable_baselines.common import tf_util
 import tensorflow as tf
@@ -48,7 +47,8 @@ def get_sources_actions(obs_ph, source_policy_paths, n_batch, n_actions):
         model = ALGOS[algo].load(path, verbose=1)
 
         def predict(obs):
-            return model.policy_tf.step(obs, deterministic=True)
+            action, _ = model.predict(obs, deterministic=True)
+            return action
 
         action = tf.py_func(predict, [obs_ph], tf.float32, name='source_actions' + str(ind))
 
@@ -338,7 +338,6 @@ class MlpAggregatePolicy(AggregatePolicy):
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False, **_kwargs):
         super(MlpAggregatePolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse,
                                                  feature_extraction="mlp", **_kwargs)
-
 
 
 register_policy('SACTwoLayerMlpAggregatePolicy', SACTwoLayerMlpAggregatePolicy)

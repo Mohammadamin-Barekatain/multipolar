@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-algo="ppo2"
-prefix_exp_name=""
+algo="mlap-ppo2"
+prefix_exp_name="SIW-"
 
 
 for i in 0.41,0.3 0.44,0.33 0.47,0.36 0.5,0.39 0.53,0.42

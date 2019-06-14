@@ -16,3 +16,23 @@ LunarLanderContinuous-v2:
                   'SDW': False,
                   'no_bias': False}
 
+RoboschoolHopper-v1:
+  normalize: true
+  n_envs: 8
+  n_timesteps: !!float 5e6
+  policy: 'MlpAggregatePolicy'
+  n_steps: 2048
+  nminibatches: 128
+  lam: 0.95
+  gamma: 0.99
+  noptepochs: 10
+  ent_coef: 0.0
+  learning_rate: 2.5e-4
+  cliprange: 0.2
+  policy_kwargs: {'source_policy_paths': ['logs/ppo2/RoboschoolHopper-v1_leg047-foot036-size08-damp05_1/RoboschoolHopper-v1.pkl',
+                                          'logs/ppo2/RoboschoolHopper-v1_leg044-foot033-size08-damp2_1/RoboschoolHopper-v1.pkl',
+                                          'logs/ppo2/RoboschoolHopper-v1_leg05-foot039-size09-damp15_1/RoboschoolHopper-v1.pkl',
+                                          'logs/ppo2/RoboschoolHopper-v1_leg053-foot042-size09-damp1_1/RoboschoolHopper-v1.pkl'],
+                  'SDW': False,
+                  'no_bias': False}
+
