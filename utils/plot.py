@@ -65,7 +65,7 @@ def plot_results(allresults, split_fn=plt_util.default_split_fn, group_fn=plt_ut
     assert isinstance(resample, int), "0: don't resample. <integer>: that many samples"
     nrows = len(sk2r)
     ncols = 1
-    figsize = figsize or (11.7, 8.27 * nrows)
+    figsize = figsize or (11.7 * 1.5, 8.27 * nrows)
     f, axarr = plt.subplots(nrows, ncols, sharex=False, squeeze=False, figsize=figsize)
 
     groups = list(set(group_fn(result) for result in allresults))

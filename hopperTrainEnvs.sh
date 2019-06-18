@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 
-algo="mlap-ppo2"
-prefix_exp_name="SIW-"
+algo=$1
+prefix_exp_name=$2
+log=$3
 
+
+if [ $# -ne 3 ]
+  then
+    echo "3 arguments must be provided"
+    exit
+fi
 
 for i in 0.41,0.3 0.44,0.33 0.47,0.36 0.5,0.39 0.53,0.42
 do
@@ -17,11 +24,11 @@ do
             do
                 exp_name="$prefix_exp_name"leg"$leg"-foot"$foot-"size"$size-"damp"$damping"
                 exp_name=${exp_name//.}
-                cmd="python train.py --env RoboschoolHopper-v1 --no-tensorboard --play 2000\
-                --algo $algo --seed $seed --exp-name $exp_name \
+                cmd="python train.py --env RoboschoolHopper-v1 --no-tensorboard \
+                --algo $algo --seed $seed --exp-name $exp_name --log-folder $log \
                 --leg_length $leg --foot_length $foot --size $size --damping $damping"
 
-                if [ ! -d "logs/$algo/RoboschoolHopper-v1_$exp_name"_1"" ]; then
+                if [ ! -d "$log/$algo/RoboschoolHopper-v1_$exp_name"_1"" ]; then
                     echo $cmd
                 fi
             done
