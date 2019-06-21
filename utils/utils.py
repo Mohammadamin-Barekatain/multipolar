@@ -57,7 +57,7 @@ def make_env(env_id, rank=0, seed=0, log_dir=None, env_params={}, params_path=No
 
 
 def create_test_env(env_id, n_envs=1, stats_path=None, seed=0, log_dir=None, should_render=True, hyperparams=None,
-                    env_params=None):
+                    env_params={}):
     """
     Create environment for testing a trained agent
 
