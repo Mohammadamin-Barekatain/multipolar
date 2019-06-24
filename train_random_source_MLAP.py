@@ -63,7 +63,7 @@ policy_kwargs = hyperparams['policy_kwargs']
 policy_kwargs['SDW'] = args.SDW
 policy_kwargs['no_bias'] = args.no_bias
 
-prefix_exp_name = 'SDW-' if args.SDW else 'SIW-'
+prefix_exp_name = 'SDW' if args.SDW else 'SIW'
 if args.no_bias:
     prefix_exp_name = 'no-bias'
 

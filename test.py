@@ -55,7 +55,7 @@ if __name__ == '__main__':
     parser.add_argument('--trained-agent', help='Path to a pretrained agent', default=None, type=str, required=True)
 
     parser.add_argument('--exp-name', help='experiment name, DO NOT USE _', default=None, type=str, required=True)
-    parser.add_argument('--n-envs', help='number of processes', default=32, type=int)
+    parser.add_argument('--n-envs', help='number of parallel test processes', default=32, type=int)
     parser.add_argument('-nte', '--num-test-episodes', help='number of test episodes', default=100, type=int)
     parser.add_argument('--seed', help='Random generator seed', type=int, default=0)
 
@@ -123,9 +123,7 @@ if __name__ == '__main__':
 
     # load the pretrained agent
     print("Loading pretrained agent")
-    # Policy should not be changed
-    del hyperparams['policy']
-    model = ALGOS[algo].load(trained_agent_path, env=env, verbose=1, **hyperparams)
+    model = ALGOS[algo].load(trained_agent_path, env=env, verbose=1)
 
     # test the pretrained agent
     print("=" * 10, "TESTING", env_id, "=" * 10)

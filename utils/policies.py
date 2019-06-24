@@ -16,6 +16,7 @@ from stable_baselines.sac.policies import mlp, gaussian_likelihood, gaussian_ent
 from stable_baselines.a2c.utils import linear
 from .distributions import make_mlap_proba_dist_type
 import warnings
+import gym
 from .aggregation import get_aggregation_var, affine_transformation
 import numpy as np
 
@@ -38,23 +39,27 @@ ALGOS = {
 }
 
 
-def get_predict_func(path):
+def get_predict_func(path, ac_space):
     # load the model
     algo = path.split('/')[1].split('_')[0]
     model = ALGOS[algo].load(path, verbose=1)
 
     def _predict(obs):
         action, _ = model.predict(obs, deterministic=True)
+
+        if isinstance(ac_space, gym.spaces.Box):
+            action = np.clip(action, ac_space.low, ac_space.high)
+
         return action
 
     return _predict
 
 
-def get_sources_actions(obs_ph, source_policy_paths, n_batch, n_actions):
+def get_sources_actions(obs_ph, source_policy_paths, n_batch, n_actions, ac_space):
     sources_actions = []
     for ind, path in enumerate(source_policy_paths):
 
-        predict = get_predict_func(path)
+        predict = get_predict_func(path, ac_space)
 
         action = tf.py_func(predict, [obs_ph], tf.float32, name='source_actions' + str(ind))
 
@@ -142,7 +147,7 @@ class AggregatePolicy(ActorCriticPolicy):
                                               scale=(feature_extraction == "cnn"))
 
         n_actions = self.ac_space.shape[0]
-        sources_actions = get_sources_actions(self.obs_ph, source_policy_paths, n_batch, n_actions)
+        sources_actions = get_sources_actions(self.obs_ph, source_policy_paths, n_batch, n_actions, ac_space)
         self.pdtype = make_mlap_proba_dist_type(ac_space, sources_actions, no_bias, SDW, summary=reuse)
 
         self._kwargs_check(feature_extraction, kwargs)
@@ -222,7 +227,7 @@ class SACAggregatePolicy(SACFeedForwardPolicy):
 
         self.n_sources = len(source_policy_paths)
         self.n_actions = self.ac_space.shape[0]
-        self.sources_actions = get_sources_actions(self.obs_ph, source_policy_paths, n_batch, self.n_actions)
+        self.sources_actions = get_sources_actions(self.obs_ph, source_policy_paths, n_batch, self.n_actions, ac_space)
 
     def make_actor(self, obs=None, reuse=False, scope="pi"):
         if obs is None:

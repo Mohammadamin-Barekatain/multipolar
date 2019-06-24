@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
 
-#video_interval=10
-#video_interval=400000
+algo=$1
+prefix_exp_name=$2
+log=$3
 
-algo="mlap-sac"
-prefix_exp_name="SIW-"
+
+if [ $# -ne 3 ]
+  then
+    echo "3 arguments must be provided"
+    exit
+fi
 
 
 for main_engine_power in 10 13 18 23 28 33 38
@@ -13,9 +18,9 @@ do
     do
         for seed in 1000 2000 3000
         do
-            exp_name="$prefix_exp_name$main_engine_power-$scale"
+            exp_name="$prefix_exp_name-enginePower$main_engine_power-scale$scale"
             cmd="python train.py --env LunarLanderContinuous-v2 --algo $algo \
-            --play 1000 --seed $seed --exp-name $exp_name \
+            --seed $seed --exp-name $exp_name --log-folder $log \
             --MAIN_ENGINE_POWER $main_engine_power --SCALE $scale"
             echo $cmd
         done
