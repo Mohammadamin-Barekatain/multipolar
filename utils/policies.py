@@ -5,8 +5,6 @@ Affiliation: TUM & OSX
 Small parts of this script has been copied from https://github.com/hill-a/stable-baselines
 """
 
-#ToDo: reduce tensorboard summary for mlap-sac and mlap-ppo
-
 from stable_baselines.common import tf_util
 import tensorflow as tf
 from stable_baselines import PPO2, A2C, ACER, ACKTR, DQN, DDPG, SAC
@@ -19,6 +17,7 @@ from stable_baselines.a2c.utils import linear
 from .distributions import make_mlap_proba_dist_type
 import warnings
 from .aggregation import get_aggregation_var, affine_transformation
+import numpy as np
 
 
 EPS = 1e-6  # Avoid NaN (prevents division by zero or log of zero)
@@ -39,16 +38,23 @@ ALGOS = {
 }
 
 
+def get_predict_func(path):
+    # load the model
+    algo = path.split('/')[1].split('_')[0]
+    model = ALGOS[algo].load(path, verbose=1)
+
+    def _predict(obs):
+        action, _ = model.predict(obs, deterministic=True)
+        return action
+
+    return _predict
+
+
 def get_sources_actions(obs_ph, source_policy_paths, n_batch, n_actions):
     sources_actions = []
     for ind, path in enumerate(source_policy_paths):
-        # load the model
-        algo = path.split('/')[1].split('_')[0]
-        model = ALGOS[algo].load(path, verbose=1)
 
-        def predict(obs):
-            action, _ = model.predict(obs, deterministic=True)
-            return action
+        predict = get_predict_func(path)
 
         action = tf.py_func(predict, [obs_ph], tf.float32, name='source_actions' + str(ind))
 
