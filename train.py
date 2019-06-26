@@ -89,10 +89,13 @@ print("=" * 10, env_id, "=" * 10)
 
 # Load hyperparameters from yaml file
 with open('hyperparams/{}.yml'.format(args.algo), 'r') as f:
+    hyperparams_dict = yaml.load(f)
     if is_atari:
-        hyperparams = yaml.load(f)['atari']
+        hyperparams = hyperparams_dict['atari']
+    elif env_id in list(hyperparams_dict.keys()):
+        hyperparams = hyperparams_dict[env_id]
     else:
-        hyperparams = yaml.load(f)[env_id]
+        raise ValueError("Hyperparameters not found for {}-{}".format(args.algo, env_id))
 
     # Should we overwrite the number of timesteps?
     if args.n_timesteps > 0:

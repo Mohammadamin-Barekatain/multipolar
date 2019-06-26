@@ -43,7 +43,6 @@ def evaluate_model(model, env, num_test_episodes=100, deterministic=True):
 
         for i in range(n_envs):
             if done[i] and num_test_episodes > len(ep_rewards):
-                #ToDo: Maybe for env using VecNormalize, the mean reward should be normalized reward
                 ep_rewards.append(running_rewards[i])
                 running_rewards[i] = 0
 

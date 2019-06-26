@@ -48,7 +48,7 @@ def get_predict_func(path, ac_space):
         action, _ = model.predict(obs, deterministic=True)
 
         if isinstance(ac_space, gym.spaces.Box):
-            action = np.clip(action, ac_space.low, ac_space.high)
+            action = np.clip(action, ac_space.low + EPS, ac_space.high - EPS)
 
         return action
 
@@ -265,6 +265,11 @@ class SACAggregatePolicy(SACFeedForwardPolicy):
         # MISSING: reg params for log and mu
         # Apply squashing and account for it in the probabilty
         deterministic_policy, policy, logp_pi = apply_squashing_func(mu_, pi_, logp_pi)
+
+        if isinstance(self.ac_space, gym.spaces.Box):
+            policy = tf.clip_by_value(policy, self.ac_space.low + EPS, self.ac_space.high - EPS)
+            deterministic_policy = tf.clip_by_value(deterministic_policy, self.ac_space.low + EPS, self.ac_space.high - EPS)
+
         self.policy = policy
         self.deterministic_policy = deterministic_policy
 
