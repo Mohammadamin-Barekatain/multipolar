@@ -24,10 +24,10 @@ from stable_baselines.ddpg import AdaptiveParamNoiseSpec, NormalActionNoise, Orn
 from stable_baselines.ppo2.ppo2 import constfn
 
 from utils import make_env, linear_schedule, get_latest_run_id, load_group_results, parse_unknown_args, create_test_env
-from utils.callbacks import VideoRecorder
+from utils.callbacks import VideoRecorder, ModelCheckpoint
 from utils.plot import plot_results
 from utils.policies import ALGOS
-from utils.wrappers import modify_env_params
+from utils.wrappers import modify_env_params, RandomUniformEnvParams
 
 parser = argparse.ArgumentParser(description='Any extra args will be used for modifying environment dynamics')
 parser.add_argument('--env', type=str, default="CartPole-v1", help='environment ID')
@@ -35,6 +35,7 @@ parser.add_argument('--algo', help='RL Algorithm', default='ppo2', type=str, req
 parser.add_argument('--seed', help='Random generator seed', type=int, default=0)
 parser.add_argument('--exp-name',  help='(optional) experiment name, DO NOT USE _', type=str, default=None)
 parser.add_argument('-n', '--n-timesteps', help='Overwrite the number of timesteps', default=-1, type=int)
+parser.add_argument('--params-ranges', type=str, nargs='+', default=[], help='ranges of the change to the env dynamics')
 
 parser.add_argument('--trained-agent', help='Path to a pretrained agent to continue training', default='', type=str)
 parser.add_argument('--save_video_interval', help='Save video every x train steps (0 = disabled)', default=0, type=int)
@@ -47,14 +48,21 @@ parser.add_argument('-f', '--log-folder', help='Log folder', type=str, default='
 parser.add_argument('--no-monitor', help='do not monitor training', action='store_true', default=False)
 parser.add_argument('--no-tensorboard', help='do not create tensorboard', action='store_true', default=False)
 parser.add_argument('--no-plot', help='do not plot the results', action='store_true', default=False)
-# ToDo: add saving to wandb
+parser.add_argument('--no-checkpoint', help='do not save checkpoints', action='store_true', default=False)
 # ToDo: support changing environments for Atari
 args, env_params = parser.parse_known_args()
 env_params = parse_unknown_args(env_params)
+params_ranges = args.params_ranges
+
+### Sanity check
+assert not (len(params_ranges) > 0 and len(env_params) > 0), \
+    'when param ranges is provided, params for modifying env must be empty. params_ranges:{}, env_params:{}'.format(
+        params_ranges, env_params)
 
 if args.trained_agent != "":
     assert args.trained_agent.endswith('.pkl') and os.path.isfile(args.trained_agent), \
         "The trained_agent must be a valid path to a .pkl file"
+###
 
 set_global_seeds(args.seed)
 env_id = args.env
@@ -108,6 +116,9 @@ pprint(saved_hyperparams)
 if len(env_params):
     print("environment parameters")
     pprint(env_params)
+elif len(params_ranges):
+    print("ranges for environment parameters")
+    pprint(params_ranges)
 
 n_envs = hyperparams.get('n_envs', 1)
 
@@ -141,7 +152,9 @@ if 'n_envs' in hyperparams.keys():
     del hyperparams['n_envs']
 del hyperparams['n_timesteps']
 
-# Create the environment and wrap it if necessary
+
+############### Create the environment and wrap it if necessary
+
 if is_atari:
     print("Using Atari wrapper")
     env = make_atari_env(env_id, num_env=n_envs, seed=args.seed)
@@ -155,14 +168,17 @@ elif args.algo in ['dqn', 'ddpg']:
     env = gym.make(env_id)
     if len(env_params) > 0:
         env = modify_env_params(env, params_path, **env_params)
+    elif len(params_ranges) > 0:
+        env = RandomUniformEnvParams(env, params_path, params_ranges)
     env.seed(args.seed)
     if not args.no_monitor:
         env = Monitor(env, monitor_log, allow_early_resets=True)
 else:
     if n_envs == 1:
-        env = DummyVecEnv([make_env(env_id, 0, args.seed, monitor_log, env_params, params_path)])
+        env = DummyVecEnv([make_env(env_id, 0, args.seed, monitor_log, env_params, params_path, params_ranges)])
     else:
-        env = SubprocVecEnv([make_env(env_id, i, args.seed, monitor_log, env_params, params_path) for i in range(n_envs)])
+        env = SubprocVecEnv([make_env(env_id, i, args.seed, monitor_log, env_params, params_path, params_ranges)
+                             for i in range(n_envs)])
     if normalize:
         print("Normalizing input and return")
         env = VecNormalize(env, **normalize_kwargs)
@@ -175,11 +191,25 @@ if hyperparams.get('frame_stack', False):
     print("Stacking {} frames".format(n_stack))
     del hyperparams['frame_stack']
 
+###############
+
 if args.save_video_interval > 0:
+    # ToDo: make interval a function of number of updates.
     env_hyperparams = {'normalize': normalize, 'n_stack': n_stack, 'normalize_kwargs': normalize_kwargs}
 
     callback = VideoRecorder(env_id, save_path, env_hyperparams, params_path,
                              args.save_video_length, interval=args.save_video_interval, env_params=env_params).callback
+
+elif not args.no_checkpoint:
+    if args.algo in ['mlap-ppo2', 'ppo2']:
+        interval = n_timesteps / hyperparams['n_steps'] / n_envs / 10
+    elif args.algo in ['sac', 'mlap-sac']:
+        interval = n_timesteps / 10
+    else:
+        raise NotImplementedError()
+
+    callback = ModelCheckpoint(save_path, interval).callback
+
 else:
     callback = None
 
@@ -232,6 +262,7 @@ model.save("{}/{}".format(save_path, env_id))
 with open(os.path.join(params_path, 'config.yml'), 'w') as f:
     saved_hyperparams.update(args.__dict__)
     saved_hyperparams.update(env_params)
+    saved_hyperparams.update({'params_ranges': params_ranges})
     yaml.dump(saved_hyperparams, f)
 
 if normalize:

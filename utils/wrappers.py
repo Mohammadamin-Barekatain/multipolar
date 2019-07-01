@@ -2,20 +2,22 @@
 Author: Mohammadamin Barekatain
 Affiliation: TUM & OSX
 """
-import os
-import gym
-import inspect
+
 import importlib
+import inspect
+import os
 import xml.etree.ElementTree as ET
 from ast import literal_eval
+
+import gym
 import numpy as np
-from roboschool import RoboschoolHopper
 from gym.envs.box2d import LunarLander, BipedalWalker, CarRacing, BipedalWalkerHardcore
+from roboschool import RoboschoolHopper
 
 
 class ModifyBox2DEnvParams(gym.Wrapper):
 
-    def __init__(self, env, **params):
+    def __init__(self, env, verbose, **params):
         """
         Modify the parameters of the given Gym environment with params.
 
@@ -36,47 +38,47 @@ class ModifyBox2DEnvParams(gym.Wrapper):
         imported_env = importlib.import_module(path)
 
         # change the parameters of the environment
-        print('changing the environment parameters')
         for key, val in params.items():
             assert key in vars(imported_env), "{} is not a parameter in the env {}".format(key, imported_env)
             vars(imported_env)[key] = val
-            print("{} changed to {}".format(key, val))
+            if verbose > 0:
+                print("{} changed to {}".format(key, val))
 
 
-def get_string_from_tuple(s):
+def _get_string_from_tuple(s):
     s = str(s)
     s = s[1:-1]
     return s.replace(',', '')
 
 
-def get_end(body):
+def _get_end(body):
     s = body.find('geom').attrib['fromto']
     s = s.replace(' ', ',')
     s = literal_eval(s)
     return s[-1]
 
 
-def get_length(body):
+def _get_length(body):
     s = body.find('geom').attrib['fromto']
     s = s.replace(' ', ',')
     s = np.array(literal_eval(s))
     return np.linalg.norm(s[3:]-s[:3])
 
 
-def set_body(body, start, end, pos=True):
+def _set_body(body, start, end, pos=True):
     geom = body.find('geom')
     fromto = (0, 0, start, 0, 0, end)
-    geom.set('fromto', get_string_from_tuple(fromto))
+    geom.set('fromto', _get_string_from_tuple(fromto))
 
     if pos:
         joint = body.find('joint')
         pos = (0, 0, start)
-        joint.set('pos', get_string_from_tuple(pos))
+        joint.set('pos', _get_string_from_tuple(pos))
 
 
 class ModifyHopperEnvParams(gym.Wrapper):
 
-    def __init__(self, env, save_file, **params):
+    def __init__(self, env, save_file, verbose, **params):
         """
         Modify the parameters of the given Roboschool Hopper environment with params.
 
@@ -98,7 +100,6 @@ class ModifyHopperEnvParams(gym.Wrapper):
         body_parts = {body.attrib['name']: body for body in root.iter('body')}
 
         # change the parameters of the environment
-        print('changing the environment parameters')
         for key, val in params.items():
             val = float(val)
             if 'length' in key:
@@ -108,18 +109,20 @@ class ModifyHopperEnvParams(gym.Wrapper):
                     change = change or key == body_name
                     if change:
                         if key == body_name:
-                            end = get_end(body_parts[body_name])
+                            end = _get_end(body_parts[body_name])
                             start = end + val
-                            print("length of {} changed to {}".format(body_name, val))
+                            if verbose > 0:
+                                print("length of {} changed to {}".format(body_name, val))
                         else:
-                            start = end + get_length(body_parts[body_name])
-                        set_body(body_parts[body_name], start, end, pos=(body_name != 'torso'))
+                            start = end + _get_length(body_parts[body_name])
+                        _set_body(body_parts[body_name], start, end, pos=(body_name != 'torso'))
                         end = start
 
                 if key == 'foot':
                     foot_fromto = (-val/3.0, 0, 0.1, val/3.0*2, 0, 0.1)
-                    body_parts[key].find('geom').set('fromto', get_string_from_tuple(foot_fromto))
-                    print("length of foot changed to {}".format(val))
+                    body_parts[key].find('geom').set('fromto', _get_string_from_tuple(foot_fromto))
+                    if verbose > 0:
+                        print("length of foot changed to {}".format(val))
 
                 elif not change:
                     raise ValueError('hopper has no body part named {}'.format(key))
@@ -130,12 +133,14 @@ class ModifyHopperEnvParams(gym.Wrapper):
                     size = float(geom.attrib['size'])
                     size = size * val
                     geom.set('size', str(size))
-                    print("size of {} changed to {}".format(name, size))
+                    if verbose > 0:
+                        print("size of {} changed to {}".format(name, size))
 
             elif key == 'damping':
                 joint = root.find('default').find('joint')
                 joint.set('damping', str(val))
-                print("damping changed to {}".format(val))
+                if verbose > 0:
+                    print("damping changed to {}".format(val))
 
             else:
                 raise ValueError('{} is either not a parameter in the env {} or not supported'.format(key, env))
@@ -143,16 +148,19 @@ class ModifyHopperEnvParams(gym.Wrapper):
         tree.write(save_file)
 
 
-def modify_env_params(env, params_path=None, **params):
+def modify_env_params(env, params_path=None, verbose=1, **params):
+
+    if verbose > 0:
+        print('changing the environment parameters')
 
     if isinstance(env.env, LunarLander) or isinstance(env.env, BipedalWalker) \
             or isinstance(env.env, CarRacing) or isinstance(env.env, BipedalWalkerHardcore):
-        return ModifyBox2DEnvParams(env, **params)
+        return ModifyBox2DEnvParams(env=env, verbose=verbose, **params)
 
     if isinstance(env.env, RoboschoolHopper):
         assert params_path is not None, "params_path must be provided for modifying Hopper"
         save_file = os.path.join(params_path, "Hopper.xml")
-        env = ModifyHopperEnvParams(env, save_file, **params)
+        env = ModifyHopperEnvParams(env=env, save_file=save_file, verbose=verbose, **params)
         if hasattr(env.env, 'model_xml'):
             env.env.model_xml = '/' + save_file
         elif hasattr(env.env.env, 'model_xml'):
@@ -163,3 +171,46 @@ def modify_env_params(env, params_path=None, **params):
 
     else:
         raise ValueError("Modifying environment parameters is not supported for {}".format(env.env))
+
+
+def _get_uniform_sampler(low, high):
+    return lambda: np.random.uniform(low, high)
+
+
+class RandomUniformEnvParams(gym.Wrapper):
+
+    def __init__(self, env, save_file, params_ranges, rank=0):
+
+        print(">>> RandomUniformEnvParams <<<")
+
+        gym.Wrapper.__init__(self, env)
+
+        param_sampler = {}
+        for config in params_ranges:
+            param_config = config.split(',')
+
+            assert len(param_config) == 3, \
+                '{} is invalid parameters ranges argument in'.format(config, params_ranges)
+
+            param = param_config[0]
+            param_min = literal_eval(param_config[1])
+            param_max = literal_eval(param_config[2])
+
+            assert param_min <= param_max, '{} minimum must not be grater than maximum {}'.format(param_min, param_max)
+
+            param_sampler[param] = _get_uniform_sampler(param_min, param_max)
+
+        self.param_sampler = param_sampler
+        self.save_file = os.path.join(save_file, "process" + str(rank))
+        os.makedirs(self.save_file, exist_ok=True)
+        self.env_unwrapped = env
+
+        self.reset()
+
+    def reset(self, **kwargs):
+        params = {param: sample_fn() for param, sample_fn in self.param_sampler.items()}
+
+        self.env = modify_env_params(self.env_unwrapped, params_path=self.save_file, verbose=0, **params)
+
+        return super(RandomUniformEnvParams, self).reset(**kwargs)
+

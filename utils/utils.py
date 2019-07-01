@@ -14,7 +14,6 @@ import time
 from collections import namedtuple
 
 import gym
-import roboschool
 import pandas
 import yaml
 from gym.envs.registration import load
@@ -24,13 +23,14 @@ from stable_baselines.common import set_global_seeds
 from stable_baselines.common.cmd_util import make_atari_env
 from stable_baselines.common.vec_env import DummyVecEnv, VecNormalize, VecFrameStack, SubprocVecEnv
 from stable_baselines.results_plotter import load_results
-# Do not remove the unused import below
+# Do not remove the unused imports below
 from utils.policies import CustomSACPolicy, CustomDQNPolicy, CustomMlpPolicy
+import roboschool
 
-from utils.wrappers import modify_env_params
+from utils.wrappers import modify_env_params, RandomUniformEnvParams
 
 
-def make_env(env_id, rank=0, seed=0, log_dir=None, env_params={}, params_path=None):
+def make_env(env_id, rank=0, seed=0, log_dir=None, env_params={}, params_path=None, params_ranges=[]):
     """
     Helper function to multiprocess training
     and log the progress.
@@ -49,6 +49,8 @@ def make_env(env_id, rank=0, seed=0, log_dir=None, env_params={}, params_path=No
         env = gym.make(env_id)
         if len(env_params) > 0:
             env = modify_env_params(env, params_path, **env_params)
+        elif len(params_ranges) > 0:
+            env = RandomUniformEnvParams(env, params_path, params_ranges, rank=rank)
         env.seed(seed + rank)
         env = Monitor(env, os.path.join(log_dir, str(rank)), allow_early_resets=True)
         return env
@@ -93,7 +95,8 @@ def create_test_env(env_id, n_envs=1, stats_path=None, seed=0, log_dir=None, sho
         # Frame-stacking with 4 frames
         env = VecFrameStack(env, n_stack=4)
     elif n_envs > 1:
-        env = SubprocVecEnv([make_env(env_id, i, seed, log_dir, env_params, stats_path) for i in range(n_envs)])
+        env = SubprocVecEnv([make_env(env_id, i, seed, log_dir, env_params=env_params, params_path=stats_path)
+                             for i in range(n_envs)])
     # Pybullet envs does not follow gym.render() interface
     elif "Bullet" in env_id:
         spec = gym.envs.registry.env_specs[env_id]
@@ -121,11 +124,11 @@ def create_test_env(env_id, n_envs=1, stats_path=None, seed=0, log_dir=None, sho
             return env
 
         if use_subproc:
-            env = SubprocVecEnv([make_env(env_id, 0, seed, log_dir, env_params, stats_path)])
+            env = SubprocVecEnv([make_env(env_id, 0, seed, log_dir, env_params=env_params, params_path=stats_path)])
         else:
             env = DummyVecEnv([_init])
     else:
-        env = DummyVecEnv([make_env(env_id, 0, seed, log_dir, env_params, stats_path)])
+        env = DummyVecEnv([make_env(env_id, 0, seed, log_dir, env_params=env_params, params_path=stats_path)])
 
     # Load saved stats for normalizing input and rewards
     # And optionally stack frames

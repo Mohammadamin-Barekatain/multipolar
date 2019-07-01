@@ -57,6 +57,7 @@ class ModelCheckpoint(Callback):
         self.n_steps += 1
         return True
 
+
 class VideoRecorder(Callback):
     """"Save the video of the agent after some epoch."""
     def __init__(self, env_id, video_folder, hyperparams, params_path, video_length,
@@ -87,7 +88,6 @@ class VideoRecorder(Callback):
 
         self.env = VecVideoRecorder(env, test_path, record_video_trigger=lambda x: x == 0, video_length=video_length,
                                     name_prefix=name_prefix)
-
 
     def callback(self, _locals, _globals):
         # record every 'interval' calls
