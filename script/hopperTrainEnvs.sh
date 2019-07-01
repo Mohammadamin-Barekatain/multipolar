@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+
+cd ..
+
 algo=$1
 prefix_exp_name=$2
 log=$3
@@ -22,15 +25,15 @@ do
         do
             for seed in 1000 2000 3000
             do
-                exp_name="$prefix_exp_name"leg"$leg"-foot"$foot-"size"$size-"damp"$damping"
+                exp_name="$prefix_exp_name-leg$leg"-foot"$foot-"size"$size-"damp"$damping"
                 exp_name=${exp_name//.}
-                cmd="python train.py --env RoboschoolHopper-v1 --no-tensorboard \
+                cmd="python train.py --env RoboschoolHopper-v1 \
                 --algo $algo --seed $seed --exp-name $exp_name --log-folder $log \
                 --leg_length $leg --foot_length $foot --size $size --damping $damping"
 
-                if [ ! -d "$log/$algo/RoboschoolHopper-v1_$exp_name"_1"" ]; then
-                    echo $cmd
-                fi
+                #if [ ! -d "$log/$algo/RoboschoolHopper-v1_$exp_name"_1"" ]; then
+                echo $cmd
+                #fi
             done
         done
     done

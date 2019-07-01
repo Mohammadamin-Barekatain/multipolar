@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+cd ..
+
 algo=$1
 prefix_exp_name=$2
 log=$3
@@ -22,7 +24,11 @@ do
             cmd="python train.py --env LunarLanderContinuous-v2 --algo $algo \
             --seed $seed --exp-name $exp_name --log-folder $log \
             --MAIN_ENGINE_POWER $main_engine_power --SCALE $scale"
-            echo $cmd
+
+            if [ ! -d "$log/$algo/LunarLanderContinuous-v2_$exp_name"_1"" ]; then
+                echo $cmd
+            fi
+
         done
     done
 done

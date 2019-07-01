@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+cd ..
+
 
 algo="mlap-sac"
 prefix_exp_name="SDW-linear-no-bias-"

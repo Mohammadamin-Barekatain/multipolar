@@ -3,6 +3,8 @@
 #algo="ppo2"
 #n_envs=40
 
+cd ..
+
 algo="sac"
 n_envs=1
 

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+cd ..
+
 algo=$1
 prefix_exp_name=$2
 IFS=',' read leg_min leg_max <<< "${3}"

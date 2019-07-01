@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+
+cd ..
+
 algo=$1
 prefix_exp_name=$2
 log=$3

@@ -3,6 +3,8 @@
 #algo="ppo2"
 #video_interval=10
 
+cd ..
+
 algo="sac"
 video_interval=400000
 n=300000
