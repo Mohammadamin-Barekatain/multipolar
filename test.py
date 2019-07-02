@@ -54,7 +54,7 @@ if __name__ == '__main__':
     parser.add_argument('--trained-agent', help='Path to a pretrained agent', default=None, type=str, required=True)
 
     parser.add_argument('--exp-name', help='experiment name, DO NOT USE _', default=None, type=str, required=True)
-    parser.add_argument('--n-envs', help='number of parallel test processes', default=32, type=int)
+    parser.add_argument('--n-envs', help='number of parallel test processes', default=16, type=int)
     parser.add_argument('-nte', '--num-test-episodes', help='number of test episodes', default=100, type=int)
     parser.add_argument('--seed', help='Random generator seed', type=int, default=0)
 
@@ -75,7 +75,7 @@ if __name__ == '__main__':
         "The trained_agent must be a valid path to a .pkl file"
 
     set_global_seeds(seed)
-    algo = trained_agent_path.split('/')[1]
+    algo = trained_agent_path.split('/')[1].split('_')[0]
     env_id = trained_agent_path.split('/')[2].split('_')[0]
 
     # set-up saving/logging paths
@@ -151,12 +151,4 @@ if __name__ == '__main__':
         record = VideoRecorder(env_id, save_path, env_hyperparams, params_path, args.play, interval=1, seed=seed,
                                env_params=env_params, deterministic=deterministic, name_prefix=name).callback
         record({'self': model}, None)
-
-
-
-
-
-
-
-
 
