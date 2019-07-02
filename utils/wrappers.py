@@ -191,7 +191,7 @@ def parse_params_ranges(params_ranges):
         param_config = config.split(',')
 
         assert len(param_config) == 3, \
-            '{} is invalid parameters ranges argument in'.format(config, params_ranges)
+            '{} is invalid parameters ranges argument in {}'.format(config, params_ranges)
 
         param = param_config[0]
         param_min = literal_eval(param_config[1])

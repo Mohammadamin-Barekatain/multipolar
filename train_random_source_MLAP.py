@@ -9,6 +9,13 @@ from pprint import pprint
 import numpy as np
 import yaml
 import subprocess
+from stable_baselines.results_plotter import ts2xy, load_results
+
+
+_THRESH= {
+    'RoboschoolHopper-v1': 2000,
+    'LunarLanderContinuous-v2': 200}
+
 
 parser = argparse.ArgumentParser()
 
@@ -20,38 +27,38 @@ parser.add_argument('--num-sources', help='Number of source policies used in MLA
 parser.add_argument('--SDW', help='Make master model state dependant', action='store_true', default=False)
 parser.add_argument('--no-bias', help='Do not learn an auxiliary source policy', action='store_true', default=False)
 parser.add_argument('--seed', help='Random generator seed', type=int, default=55)
+parser.add_argument('--params-ranges', type=str, nargs='+', default=[], help='ranges of the samples of env dynamics',
+                    required=True)
 
-parser.add_argument('--env', type=str, help='environment ID', choices=['RoboschoolHopper-v1', 'LunarLanderContinuous-v2'])
+parser.add_argument('--env', type=str, help='environment ID',
+                    choices=['RoboschoolHopper-v1', 'LunarLanderContinuous-v2'], required=True)
 parser.add_argument('-f', '--log-folder', help='Log folder', type=str, default='logs')
 
 args = parser.parse_args()
 env_id = args.env
 algo = args.algo
+sources_dir = args.sources_dir
+num_sources = args.num_sources
 np.random.seed(args.seed)
 
 
-def hopper_get_random_source_policies():
-    env_params = [(leg, foot, size, damp)
-                   for leg, foot in [("041", "03"), ("044","033"), ("047","036"), ("05","039") , ("053","042")]
-                   for size in  ["075", "08", "085", "09", "095", "1"]
-                   for damp in ["05", "1", "15", "2", "25"]]
-
-    sample_idxs = np.random.choice(list(range(len(env_params))), args.num_sources, replace=False)
+def _get_random_source_policies():
 
     source_policies = []
-    for i in sample_idxs:
-        leg, foot, size, damp = env_params[i]
+    for source_path in os.listdir(sources_dir):
+        if env_id in source_path and source_path[-1] == '1':
+            path = sources_dir + source_path
+            _, y = ts2xy(load_results(path), 'episodes')
+            if np.mean(y[-100:]) > _THRESH[env_id]:
+                source_policies.append('{}/{}.pkl'.format(path, env_id))
 
-        exp_name = env_id + '_leg' + leg + '-foot' + foot + '-size' + size + '-damp' + damp + '_1'
-        source_path = os.path.join(args.sources_dir, exp_name, env_id +'.pkl')
+    if len(source_policies) < num_sources:
+        raise ValueError('{} number of valid source policies is less than the requested number of sources {}'.format(
+            source_policies, num_sources))
 
-        source_policies.append(source_path)
+    source_policies = np.random.choice(source_policies, num_sources, replace=False)
 
-    return source_policies
-
-
-def lunar_get_random_source_policies():
-    raise NotImplementedError
+    return source_policies.tolist()
 
 
 with open('hyperparams/{}.yml'.format(algo), 'r') as f:
@@ -63,22 +70,14 @@ policy_kwargs = hyperparams['policy_kwargs']
 policy_kwargs['SDW'] = args.SDW
 policy_kwargs['no_bias'] = args.no_bias
 
-prefix_exp_name = 'SDW' if args.SDW else 'SIW'
+exp_prefix = '{}sources-{}sets-'.format(num_sources, args.num_set)
+exp_prefix += 'SDW' if args.SDW else 'SIW'
 if args.no_bias:
-    prefix_exp_name = 'no-bias'
+    exp_prefix = 'no-bias'
 
 for _ in range(args.num_set):
 
-    if env_id == 'RoboschoolHopper-v1':
-        policy_kwargs['source_policy_paths'] = hopper_get_random_source_policies()
-        bash_script = './hopperTrainEnvs.sh'
-
-    elif env_id == 'LunarLanderContinuous-v2':
-        policy_kwargs['source_policy_paths'] = lunar_get_random_source_policies()
-        bash_script = './lunarTrainEnvs.sh'
-
-    else:
-        raise NotImplementedError
+    policy_kwargs['source_policy_paths'] = _get_random_source_policies()
 
     # save the modified hyperparams
     with open('hyperparams/{}.yml'.format(algo), 'wb') as f:
@@ -87,10 +86,19 @@ for _ in range(args.num_set):
 
     pprint(hyperparams)
 
-    train_envs_sh = [bash_script, algo, prefix_exp_name, args.log_folder]
+    train_envs_cmd = ['python', 'random_env_dynamic_train_cmd_gen.py',
+                     '--num-samples', '100',
+                     '--algo', algo,
+                     '--seed', '0',
+                     '--env', env_id,
+                     '--log-folder', args.log_folder,
+                     '--exp-prefix', exp_prefix,
+                     '--params-ranges']
 
-    result = subprocess.run(train_envs_sh, stdout=subprocess.PIPE)
+    for param in args.params_ranges:
+        train_envs_cmd.append(param)
 
-    subprocess.run(['parallel', '--eta', '-j', args.num_jobs, '--load', '80%', '--noswap'],
-                   input=result.stdout)
+    subprocess.run(train_envs_cmd)
+
+    subprocess.run(['parallel', '-a', '/tmp/out.txt', '--eta', '-j', args.num_jobs, '--load', '90%'])
 

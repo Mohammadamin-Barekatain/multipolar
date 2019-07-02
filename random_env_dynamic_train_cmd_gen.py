@@ -33,27 +33,27 @@ def truncate(n, decimals=0):
 
 
 param_sampler = parse_params_ranges(args.params_ranges)
-for _ in range(args.num_samples):
-    params = {param: truncate(sample_fn(), 2) for param, sample_fn in param_sampler.items()}
+with open('/tmp/out.txt', 'w') as f:
+    for _ in range(args.num_samples):
+        params = {param: truncate(sample_fn(), 2) for param, sample_fn in param_sampler.items()}
 
-    for seed in [1000, 2000, 3000]:
+        for seed in [1000, 2000, 3000]:
 
-        cmd = 'python train.py --env {} --algo {} --seed {} --log-folder {}'.format(args.env, args.algo, seed,
-                                                                                    args.log_folder)
+            cmd = 'python train.py --env {} --algo {} --seed {} --log-folder {}'.format(args.env, args.algo, seed,
+                                                                                        args.log_folder)
 
-        exp_name = args.exp_prefix
-        for param, val in params.items():
-            cmd += ' --{} {}'.format(param, val)
-            exp_name += '-' + '{}'.format(param.split('_')[0])
+            exp_name = args.exp_prefix
+            for param, val in params.items():
+                cmd += ' --{} {}'.format(param, val)
+                exp_name += '-' + '{}'.format(param.split('_')[0])
 
-            # remove . from the exp name
-            val = str(val)
-            exp_name += ''.join(val.split('.'))
+                # remove . from the exp name
+                val = str(val)
+                exp_name += ''.join(val.split('.'))
 
-        if exp_name[0] == '-':
-            exp_name = exp_name[1:]
+            if exp_name[0] == '-':
+                exp_name = exp_name[1:]
 
-        cmd += ' --exp-name ' + exp_name
+            cmd += ' --exp-name ' + exp_name
 
-        print(cmd)
-
+            f.write(cmd + '\n')
