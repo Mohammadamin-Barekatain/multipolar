@@ -136,11 +136,19 @@ class ModifyHopperEnvParams(gym.Wrapper):
                     if verbose > 0:
                         print("size of {} changed to {}".format(name, size))
 
-            elif key == 'damping':
+            elif key == 'damping' or key == 'armature':
                 joint = root.find('default').find('joint')
-                joint.set('damping', str(val))
+                joint.set(key, str(val))
                 if verbose > 0:
-                    print("damping changed to {}".format(val))
+                    print("{} changed to {}".format(key, val))
+
+            elif key == 'friction':
+                geom = root.find('default').find('geom')
+                val = str(val)
+                val = "{} {} {}".format(val, val, val)
+                geom.set(key, val)
+                if verbose > 0:
+                    print("{} changed to {}".format(key, val))
 
             else:
                 raise ValueError('{} is either not a parameter in the env {} or not supported'.format(key, env))
@@ -177,6 +185,25 @@ def _get_uniform_sampler(low, high):
     return lambda: np.random.uniform(low, high)
 
 
+def parse_params_ranges(params_ranges):
+    param_sampler = {}
+    for config in params_ranges:
+        param_config = config.split(',')
+
+        assert len(param_config) == 3, \
+            '{} is invalid parameters ranges argument in'.format(config, params_ranges)
+
+        param = param_config[0]
+        param_min = literal_eval(param_config[1])
+        param_max = literal_eval(param_config[2])
+
+        assert param_min <= param_max, '{} minimum must not be grater than maximum {}'.format(param_min, param_max)
+
+        param_sampler[param] = _get_uniform_sampler(param_min, param_max)
+
+    return param_sampler
+
+
 class RandomUniformEnvParams(gym.Wrapper):
 
     def __init__(self, env, save_file, params_ranges, rank=0):
@@ -185,22 +212,7 @@ class RandomUniformEnvParams(gym.Wrapper):
 
         gym.Wrapper.__init__(self, env)
 
-        param_sampler = {}
-        for config in params_ranges:
-            param_config = config.split(',')
-
-            assert len(param_config) == 3, \
-                '{} is invalid parameters ranges argument in'.format(config, params_ranges)
-
-            param = param_config[0]
-            param_min = literal_eval(param_config[1])
-            param_max = literal_eval(param_config[2])
-
-            assert param_min <= param_max, '{} minimum must not be grater than maximum {}'.format(param_min, param_max)
-
-            param_sampler[param] = _get_uniform_sampler(param_min, param_max)
-
-        self.param_sampler = param_sampler
+        self.param_sampler = parse_params_ranges(params_ranges)
         self.save_file = os.path.join(save_file, "process" + str(rank))
         os.makedirs(self.save_file, exist_ok=True)
         self.env_unwrapped = env

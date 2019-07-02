@@ -53,7 +53,7 @@ class ModelCheckpoint(Callback):
                     self.best_mean_reward = mean_reward
                     # Example for saving best model
                     print(">>> Saving new best model")
-                    _locals['self'].save(self.log_dir + 'best_model.pkl')
+                    _locals['self'].save(os.path.join(self.log_dir, 'best_model.pkl'))
         self.n_steps += 1
         return True
 

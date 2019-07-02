@@ -208,6 +208,8 @@ elif not args.no_checkpoint:
     else:
         raise NotImplementedError()
 
+    interval = int(interval)
+
     callback = ModelCheckpoint(save_path, interval).callback
 
 else:
