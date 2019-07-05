@@ -48,7 +48,7 @@ parser.add_argument('-f', '--log-folder', help='Log folder', type=str, default='
 parser.add_argument('--no-monitor', help='do not monitor training', action='store_true', default=False)
 parser.add_argument('--no-tensorboard', help='do not create tensorboard', action='store_true', default=False)
 parser.add_argument('--no-plot', help='do not plot the results', action='store_true', default=False)
-parser.add_argument('--no-checkpoint', help='do not save checkpoints', action='store_true', default=False)
+parser.add_argument('--checkpoint', help='save checkpoints', action='store_true', default=False)
 # ToDo: support changing environments for Atari
 args, env_params = parser.parse_known_args()
 env_params = parse_unknown_args(env_params)
@@ -200,7 +200,7 @@ if args.save_video_interval > 0:
     callback = VideoRecorder(env_id, save_path, env_hyperparams, params_path,
                              args.save_video_length, interval=args.save_video_interval, env_params=env_params).callback
 
-elif not args.no_checkpoint:
+elif args.checkpoint:
     if args.algo in ['mlap-ppo2', 'ppo2']:
         interval = n_timesteps / hyperparams['n_steps'] / n_envs / 10
     elif args.algo in ['sac', 'mlap-sac']:
