@@ -30,8 +30,8 @@ from utils.policies import ALGOS
 from utils.wrappers import modify_env_params, RandomUniformEnvParams
 
 parser = argparse.ArgumentParser(description='Any extra args will be used for modifying environment dynamics')
-parser.add_argument('--env', type=str, default="CartPole-v1", help='environment ID')
-parser.add_argument('--algo', help='RL Algorithm', default='ppo2', type=str, required=False, choices=list(ALGOS.keys()))
+parser.add_argument('--env', type=str, required=True, help='environment ID')
+parser.add_argument('--algo', help='RL Algorithm', type=str, required=True, choices=list(ALGOS.keys()))
 parser.add_argument('--seed', help='Random generator seed', type=int, default=0)
 parser.add_argument('--exp-name',  help='(optional) experiment name, DO NOT USE _', type=str, default=None)
 parser.add_argument('-n', '--n-timesteps', help='Overwrite the number of timesteps', default=-1, type=int)

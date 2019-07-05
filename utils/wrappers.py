@@ -12,6 +12,7 @@ from ast import literal_eval
 import gym
 import numpy as np
 from gym.envs.box2d import LunarLander, BipedalWalker, CarRacing, BipedalWalkerHardcore
+from gym.envs.classic_control import AcrobotEnv
 from roboschool import RoboschoolHopper
 
 
@@ -40,9 +41,41 @@ class ModifyBox2DEnvParams(gym.Wrapper):
         # change the parameters of the environment
         for key, val in params.items():
             assert key in vars(imported_env), "{} is not a parameter in the env {}".format(key, imported_env)
-            vars(imported_env)[key] = val
+            vars(imported_env)[key] = float(val)
             if verbose > 0:
                 print("{} changed to {}".format(key, val))
+
+
+class ModifyClassicControlEnvParams(gym.Wrapper):
+
+    def __init__(self, env, verbose, **params):
+        """
+        Modify the parameters of the given Gym environment with params.
+
+        env: (Gym Environment) the environment to wrap
+        params: the parameters to change in env
+        """
+        gym.Wrapper.__init__(self, env)
+
+        # find the path to the source code of the environment
+        env_class = env.env.__class__
+
+        for key, val in params.items():
+            assert key in vars(env_class), "{} is not a parameter in the env {}".format(key, env_class)
+            if 'LINK_COM_POS' not in key:
+                val = float(val)
+                setattr(env_class, key, val)
+                if verbose > 0:
+                    print("{} changed to {}".format(key, val))
+
+        for key, val in params.items():
+            val = float(val)
+            if 'LINK_COM_POS' in key:
+                ind = key.split('_')[-1]
+                val = getattr(env_class, 'LINK_LENGTH_{}'.format(ind)) * val
+                setattr(env_class, key, val)
+                if verbose > 0:
+                    print("{} changed to {}".format(key, val))
 
 
 def _get_string_from_tuple(s):
@@ -165,7 +198,10 @@ def modify_env_params(env, params_path=None, verbose=1, **params):
             or isinstance(env.env, CarRacing) or isinstance(env.env, BipedalWalkerHardcore):
         return ModifyBox2DEnvParams(env=env, verbose=verbose, **params)
 
-    if isinstance(env.env, RoboschoolHopper):
+    elif isinstance(env.env, AcrobotEnv):
+        return ModifyClassicControlEnvParams(env=env, verbose=verbose, **params)
+
+    elif isinstance(env.env, RoboschoolHopper):
         assert params_path is not None, "params_path must be provided for modifying Hopper"
         save_file = os.path.join(params_path, "Hopper.xml")
         env = ModifyHopperEnvParams(env=env, save_file=save_file, verbose=verbose, **params)
