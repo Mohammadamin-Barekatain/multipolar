@@ -14,7 +14,8 @@ from stable_baselines.results_plotter import ts2xy, load_results
 
 _THRESH= {
     'RoboschoolHopper-v1': 2000,
-    'LunarLanderContinuous-v2': 200}
+    'LunarLanderContinuous-v2': 200,
+    'Acrobot-v1': -100}
 
 
 parser = argparse.ArgumentParser()
@@ -31,7 +32,7 @@ parser.add_argument('--params-ranges', type=str, nargs='+', default=[], help='ra
                     required=True)
 
 parser.add_argument('--env', type=str, help='environment ID',
-                    choices=['RoboschoolHopper-v1', 'LunarLanderContinuous-v2'], required=True)
+                    choices=['RoboschoolHopper-v1', 'LunarLanderContinuous-v2', 'Acrobot-v1'], required=True)
 parser.add_argument('-f', '--log-folder', help='Log folder', type=str, default='logs')
 
 args = parser.parse_args()

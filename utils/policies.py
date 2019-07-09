@@ -19,6 +19,7 @@ import warnings
 import gym
 from .aggregation import get_aggregation_var, affine_transformation
 import numpy as np
+from gym import spaces
 
 
 EPS = 1e-6  # Avoid NaN (prevents division by zero or log of zero)
@@ -55,13 +56,15 @@ def get_predict_func(path, ac_space):
     return _predict
 
 
-def get_sources_actions(obs_ph, source_policy_paths, n_batch, n_actions, ac_space):
+def get_sources_actions(obs_ph, source_policy_paths, n_batch, n_actions, ac_space, action_dtype=tf.float32):
     sources_actions = []
     for ind, path in enumerate(source_policy_paths):
 
         predict = get_predict_func(path, ac_space)
 
-        action = tf.py_func(predict, [obs_ph], tf.float32, name='source_actions' + str(ind))
+        action = tf.py_func(predict, [obs_ph], action_dtype, name='source_actions' + str(ind))
+        if action_dtype != tf.float32:
+            action = tf.one_hot(action, n_actions, dtype=tf.float32)
 
         action.set_shape((n_batch, n_actions))
         action = tf.stop_gradient(action)
@@ -146,8 +149,19 @@ class AggregatePolicy(ActorCriticPolicy):
         super(AggregatePolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=reuse,
                                               scale=(feature_extraction == "cnn"))
 
-        n_actions = self.ac_space.shape[0]
-        sources_actions = get_sources_actions(self.obs_ph, source_policy_paths, n_batch, n_actions, ac_space)
+        if isinstance(ac_space, spaces.Box):
+            n_actions = self.ac_space.shape[0]
+            action_dtype = tf.float32
+
+        elif isinstance(ac_space, spaces.Discrete):
+            n_actions = ac_space.n
+            action_dtype = tf.int64
+
+        else:
+            raise NotImplementedError("MLAP is not implemented for the required action space")
+
+        sources_actions = get_sources_actions(self.obs_ph, source_policy_paths, n_batch,
+                                              n_actions, ac_space, action_dtype)
         self.pdtype = make_mlap_proba_dist_type(ac_space, sources_actions, no_bias, SDW, summary=reuse)
 
         self._kwargs_check(feature_extraction, kwargs)
@@ -276,6 +290,7 @@ class SACAggregatePolicy(SACFeedForwardPolicy):
         return deterministic_policy, policy, logp_pi
 
 
+# ToDo: rename this to offPolicy
 class SACTwoLayerMlpAggregatePolicy(SACAggregatePolicy):
     """
     Policy object that implements DDPG-like actor critic aggregation, using a MLP (2 layers of 64) in master model
@@ -294,47 +309,6 @@ class SACTwoLayerMlpAggregatePolicy(SACAggregatePolicy):
 
         super(SACTwoLayerMlpAggregatePolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch,
                                                             reuse, feature_extraction="mlp", **_kwargs)
-
-
-class SACOneLayerMlpAggregatePolicy(SACAggregatePolicy):
-    """
-    Policy object that implements DDPG-like actor critic aggregation, using a MLP (1 layers of 64) in master model
-
-    :param sess: (TensorFlow session) The current TensorFlow session
-    :param ob_space: (Gym Space) The observation space of the environment
-    :param ac_space: (Gym Space) The action space of the environment
-    :param n_env: (int) The number of environments to run
-    :param n_steps: (int) The number of steps to run for each environment
-    :param n_batch: (int) The number of batch to run (n_envs * n_steps)
-    :param reuse: (bool) If the policy is reusable or not
-    :param _kwargs: (dict) Extra keyword arguments for source policies path and the nature CNN feature extraction
-    """
-
-    def __init__(self, sess, ob_space, ac_space, n_env=1, n_steps=1, n_batch=None, reuse=False, **_kwargs):
-
-        super(SACOneLayerMlpAggregatePolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch,
-                                                            reuse=reuse, layers=[64], feature_extraction="mlp",
-                                                            **_kwargs)
-
-
-class SACLinearAggregatePolicy(SACAggregatePolicy):
-    """
-    Policy object that implements DDPG-like actor critic aggregation, using a no hidden layer in master model
-
-    :param sess: (TensorFlow session) The current TensorFlow session
-    :param ob_space: (Gym Space) The observation space of the environment
-    :param ac_space: (Gym Space) The action space of the environment
-    :param n_env: (int) The number of environments to run
-    :param n_steps: (int) The number of steps to run for each environment
-    :param n_batch: (int) The number of batch to run (n_envs * n_steps)
-    :param reuse: (bool) If the policy is reusable or not
-    :param _kwargs: (dict) Extra keyword arguments for source policies path and the nature CNN feature extraction
-    """
-
-    def __init__(self, sess, ob_space, ac_space, n_env=1, n_steps=1, n_batch=None, reuse=False, **_kwargs):
-
-        super(SACLinearAggregatePolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch,
-                                                       reuse=reuse, layers=[], feature_extraction="mlp", **_kwargs)
 
 
 class MlpAggregatePolicy(AggregatePolicy):
@@ -357,8 +331,6 @@ class MlpAggregatePolicy(AggregatePolicy):
 
 
 register_policy('SACTwoLayerMlpAggregatePolicy', SACTwoLayerMlpAggregatePolicy)
-register_policy('SACOneLayerMlpAggregatePolicy', SACOneLayerMlpAggregatePolicy)
-register_policy('SACLinearAggregatePolicy', SACLinearAggregatePolicy)
 register_policy('MlpAggregatePolicy', MlpAggregatePolicy)
 register_policy('CustomSACPolicy', CustomSACPolicy)
 register_policy('CustomDQNPolicy', CustomDQNPolicy)

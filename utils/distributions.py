@@ -8,13 +8,12 @@ Parts of this script has been copied from https://github.com/hill-a/stable-basel
 import tensorflow as tf
 from gym import spaces
 from stable_baselines.a2c.utils import linear, ortho_init
-from stable_baselines.common.distributions import DiagGaussianProbabilityDistribution, ProbabilityDistributionType
+from stable_baselines.common.distributions import DiagGaussianProbabilityDistribution, ProbabilityDistributionType, \
+    CategoricalProbabilityDistribution
 
 from .aggregation import get_aggregation_var, affine_transformation
 
-
-# ToDo: implement CategoricalProbabilityDistributionType, MultiCategoricalProbabilityDistributionType,
-#  BernoulliProbabilityDistributionType
+# ToDo: implement MultiCategoricalProbabilityDistributionType and BernoulliProbabilityDistributionType
 
 
 class DiagGaussianProbabilityDistributionType(ProbabilityDistributionType):
@@ -30,7 +29,7 @@ class DiagGaussianProbabilityDistributionType(ProbabilityDistributionType):
         self.sources_actions = sources_actions
         self.no_bias = no_bias
         self.summary = summary
-        self.SDW=SDW
+        self.SDW = SDW
 
     def probability_distribution_class(self):
         return DiagGaussianProbabilityDistribution
@@ -68,6 +67,44 @@ class DiagGaussianProbabilityDistributionType(ProbabilityDistributionType):
         return tf.float32
 
 
+class CategoricalProbabilityDistributionType(ProbabilityDistributionType):
+    def __init__(self, n_cat, sources_actions, no_bias, SDW, summary):
+        """
+        The probability distribution type for categorical input
+
+        :param n_cat: (int) the number of categories
+        """
+        self.n_cat = n_cat
+        self.sources_actions = sources_actions
+        self.no_bias = no_bias
+        self.summary = summary
+        self.SDW = SDW
+
+    def probability_distribution_class(self):
+        return CategoricalProbabilityDistribution
+
+    def proba_distribution_from_latent(self, pi_latent_vector, vf_latent_vector, init_scale=1.0, init_bias=0.0):
+
+        master_W, master_b = get_aggregation_var(pi_latent_vector, 'master', self.sources_actions.get_shape()[1],
+                                                 self.n_cat, no_bias=self.no_bias,
+                                                 SDW=self.SDW, bias_layer_initializer=ortho_init(init_scale),
+                                                 summary=self.summary)
+
+        pdparam = affine_transformation(self.sources_actions, master_W, master_b, summary=self.summary)
+        q_values = linear(vf_latent_vector, 'q', self.n_cat, init_scale=init_scale, init_bias=init_bias)
+
+        return self.proba_distribution_from_flat(pdparam), pdparam, q_values
+
+    def param_shape(self):
+        return [self.n_cat]
+
+    def sample_shape(self):
+        return []
+
+    def sample_dtype(self):
+        return tf.int32
+
+
 def make_mlap_proba_dist_type(ac_space, sources_actions, no_bias, SDW, summary):
     """
     return an instance of ProbabilityDistributionType for the correct type of action space
@@ -82,7 +119,7 @@ def make_mlap_proba_dist_type(ac_space, sources_actions, no_bias, SDW, summary):
         assert len(ac_space.shape) == 1, "Error: the action space must be a vector"
         return DiagGaussianProbabilityDistributionType(ac_space.shape[0], sources_actions, no_bias, SDW, summary)
     elif isinstance(ac_space, spaces.Discrete):
-        raise NotImplementedError('probability distribution, not implemented for Discrete action space')
+        return CategoricalProbabilityDistributionType(ac_space.n, sources_actions, no_bias, SDW, summary)
         # return CategoricalProbabilityDistributionType(ac_space.n)
     elif isinstance(ac_space, spaces.MultiDiscrete):
         raise NotImplementedError('probability distribution, not implemented for MultiDiscrete action space')

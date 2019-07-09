@@ -1,38 +1,56 @@
-
-LunarLanderContinuous-v2:
-  n_envs: 16
-  n_timesteps: !!float 1e6
-  policy: 'MlpAggregatePolicy'
-  n_steps: 1024 #16384
-  nminibatches: 32
-  lam: 0.98
-  gamma: 0.999
-  noptepochs: 4
-  ent_coef: 0.01
-  policy_kwargs: {'source_policy_paths': ['logs/sac_scratch/LunarLanderContinuous-v2_13-40_1/LunarLanderContinuous-v2.pkl',
-                                          'logs/sac_scratch/LunarLanderContinuous-v2_13-30_1/LunarLanderContinuous-v2.pkl',
-                                          'logs/sac_scratch/LunarLanderContinuous-v2_33-40_1/LunarLanderContinuous-v2.pkl',
-                                          'logs/sac_scratch/LunarLanderContinuous-v2_33-30_1/LunarLanderContinuous-v2.pkl'],
-                  'SDW': False,
-                  'no_bias': False}
-
-RoboschoolHopper-v1:
-  normalize: true
-  n_envs: 8
-  n_timesteps: !!float 5e6
-  policy: 'MlpAggregatePolicy'
-  n_steps: 2048
-  nminibatches: 128
-  lam: 0.95
-  gamma: 0.99
-  noptepochs: 10
+---
+Acrobot-v1:
   ent_coef: 0.0
-  learning_rate: 2.5e-4
+  gamma: 0.99
+  lam: 0.94
+  n_envs: 16
+  n_steps: 256
+  n_timesteps: 400000.0
+  nminibatches: 8
+  noptepochs: 4
+  normalize: true
+  policy: MlpAggregatePolicy
+  policy_kwargs:
+    SDW: false
+    no_bias: false
+    source_policy_paths:
+    - logs/ppo2_scratch/Acrobot-v1_LinkLength052-LinkLength064-LinkMass142-LinkMass12-LinkComPos007-LinkComPos019-LinkMoi102_1/Acrobot-v1.pkl
+    - logs/ppo2_scratch/Acrobot-v1_LinkLength042-LinkLength114-LinkMass13-LinkMass106-LinkComPos041-LinkComPos011-LinkMoi112_1/Acrobot-v1.pkl
+    - logs/ppo2_scratch/Acrobot-v1_LinkLength088-LinkLength054-LinkMass066-LinkMass135-LinkComPos01-LinkComPos047-LinkMoi039_1/Acrobot-v1.pkl
+    - logs/ppo2_scratch/Acrobot-v1_LinkLength037-LinkLength038-LinkMass052-LinkMass133-LinkComPos075-LinkComPos083-LinkMoi147_1/Acrobot-v1.pkl
+LunarLanderContinuous-v2:
+  ent_coef: 0.01
+  gamma: 0.999
+  lam: 0.98
+  n_envs: 16
+  n_steps: 1024
+  n_timesteps: 1000000.0
+  nminibatches: 32
+  noptepochs: 4
+  policy: MlpAggregatePolicy
+  policy_kwargs:
+    SDW: false
+    no_bias: false
+    source_policy_paths:
+    - logs/sac_scratch/LunarLanderContinuous-v2_13-40_1/LunarLanderContinuous-v2.pkl
+    - logs/sac_scratch/LunarLanderContinuous-v2_13-30_1/LunarLanderContinuous-v2.pkl
+    - logs/sac_scratch/LunarLanderContinuous-v2_33-40_1/LunarLanderContinuous-v2.pkl
+    - logs/sac_scratch/LunarLanderContinuous-v2_33-30_1/LunarLanderContinuous-v2.pkl
+RoboschoolHopper-v1:
   cliprange: 0.2
-  policy_kwargs: {'source_policy_paths': ['logs/ppo2/RoboschoolHopper-v1_leg047-foot036-size08-damp05_1/RoboschoolHopper-v1.pkl',
-                                          'logs/ppo2/RoboschoolHopper-v1_leg044-foot033-size08-damp2_1/RoboschoolHopper-v1.pkl',
-                                          'logs/ppo2/RoboschoolHopper-v1_leg05-foot039-size09-damp15_1/RoboschoolHopper-v1.pkl',
-                                          'logs/ppo2/RoboschoolHopper-v1_leg053-foot042-size09-damp1_1/RoboschoolHopper-v1.pkl'],
-                  'SDW': False,
-                  'no_bias': False}
-
+  ent_coef: 0.0
+  gamma: 0.99
+  lam: 0.95
+  learning_rate: 0.00025
+  n_envs: 8
+  n_steps: 2048
+  n_timesteps: 5000000.0
+  nminibatches: 128
+  noptepochs: 10
+  normalize: true
+  policy: MlpAggregatePolicy
+  policy_kwargs:
+    SDW: false
+    no_bias: false
+    source_policy_paths:
+    - logs/ppo2_scratch/RoboschoolHopper-v1_leg038-foot029-thigh037-torso042-size108-damping396-friction111-armature074_1/RoboschoolHopper-v1.pkl
