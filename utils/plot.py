@@ -51,7 +51,7 @@ def plot_results(allresults, split_fn=plt_util.default_split_fn, group_fn=plt_ut
     xbase: int, regular intervals to put ticks on x axis
     ybase: int, regular intervals to put ticks on y axis
     """
-    seaborn.set(style="darkgrid", font_scale=1.5)
+    seaborn.set(style="darkgrid", font_scale=4)
     if split_fn is None: split_fn = lambda _ : ''
     if group_fn is None: group_fn = lambda _ : ''
 
@@ -129,13 +129,17 @@ def plot_results(allresults, split_fn=plt_util.default_split_fn, group_fn=plt_ut
         # https://matplotlib.org/users/legend_guide.html
         plt.tight_layout()
         if any(g2l.keys()):
+            # ax.legend(
+            #     g2l.values(),
+            #     ['%s (%i)'%(g, g2c[g]) for g in g2l] if average_group else g2l.keys(),
+            #     loc=4 if legend_outside else None,
+            #     bbox_to_anchor=(1, 1) if legend_outside else None)
             ax.legend(
-                g2l.values(),
-                ['%s (%i)'%(g, g2c[g]) for g in g2l] if average_group else g2l.keys(),
-                loc=2 if legend_outside else None,
+                g2l.values(), g2l.keys(), loc=0 if legend_outside else None,
                 bbox_to_anchor=(1, 1) if legend_outside else None)
+
         ax.set_xlabel(xaxis)
-        ax.set_ylabel('reward')
+        ax.set_ylabel('episodic reward')
         if title is None:
             ax.set_title(sk)
         else:
@@ -146,6 +150,9 @@ def plot_results(allresults, split_fn=plt_util.default_split_fn, group_fn=plt_ut
         if ybase:
             loc = plticker.MultipleLocator(base=ybase)
             ax.yaxis.set_major_locator(loc)
+
+        ax.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
+
     return f, axarr
 
 
