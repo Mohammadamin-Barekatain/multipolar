@@ -276,7 +276,7 @@ if normalize:
 
 if not args.no_plot and n_timesteps > 1:
     results = load_group_results(save_path, verbose=True)
-    f, _ = plot_results(results, average_group=True, shaded_std=False)
+    f, _ = plot_results(results, average_group=False, shaded_std=False)
     f.savefig(os.path.join(save_path, 'results.png'), bbox_inches='tight', format='png')
 
 if args.play > 0:

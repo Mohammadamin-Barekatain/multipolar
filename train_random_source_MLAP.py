@@ -12,10 +12,15 @@ import subprocess
 from stable_baselines.results_plotter import ts2xy, load_results
 
 
-_THRESH= {
+_OPT_THRESH = {
     'RoboschoolHopper-v1': 2000,
     'LunarLanderContinuous-v2': 200,
     'Acrobot-v1': -100}
+
+_SUBOPT_THRESH = {
+    'RoboschoolHopper-v1': 1500,
+    'LunarLanderContinuous-v2': 150,
+    'Acrobot-v1': -150}
 
 
 parser = argparse.ArgumentParser()
@@ -28,6 +33,7 @@ parser.add_argument('--num-sources', help='Number of source policies used in MLA
 parser.add_argument('--SDW', help='Make master model state dependant', action='store_true', default=False)
 parser.add_argument('--no-bias', help='Do not learn an auxiliary source policy', action='store_true', default=False)
 parser.add_argument('--seed', help='Random generator seed', type=int, default=55)
+parser.add_argument('--num-subopt-sources', type=int, help='number of sub optimal source policies', required=True)
 parser.add_argument('--params-ranges', type=str, nargs='+', default=[], help='ranges of the samples of env dynamics',
                     required=True)
 
@@ -39,27 +45,35 @@ args = parser.parse_args()
 env_id = args.env
 algo = args.algo
 sources_dir = args.sources_dir
-num_sources = args.num_sources
+num_opt_sources = args.num_sources - args.num_subopt_sources
+num_subopt_sources = args.num_subopt_sources
 np.random.seed(args.seed)
 
 
 def _get_random_source_policies():
 
-    source_policies = []
+    opt_source_policies = []
+    subopt_source_policies = []
     for source_path in os.listdir(sources_dir):
         if env_id in source_path and source_path[-1] == '1':
             path = sources_dir + source_path
             _, y = ts2xy(load_results(path), 'episodes')
-            if np.mean(y[-100:]) > _THRESH[env_id]:
-                source_policies.append('{}/{}.pkl'.format(path, env_id))
+            if np.mean(y[-100:]) > _OPT_THRESH[env_id]:
+                opt_source_policies.append('{}/{}.pkl'.format(path, env_id))
+            if np.mean(y[-100:]) < _SUBOPT_THRESH[env_id]:
+                subopt_source_policies.append('{}/{}.pkl'.format(path, env_id))
 
-    if len(source_policies) < num_sources:
-        raise ValueError('{} number of valid source policies is less than the requested number of sources {}'.format(
-            source_policies, num_sources))
+    if len(opt_source_policies) < num_opt_sources:
+        raise ValueError('{} number of optimal source policies is less than the requested number {}'.format(
+            opt_source_policies, num_opt_sources))
+    if len(subopt_source_policies) < num_subopt_sources:
+        raise ValueError('{} number of suboptimal source policies is less than the requested number {}'.format(
+            subopt_source_policies, num_subopt_sources))
 
-    source_policies = np.random.choice(source_policies, num_sources, replace=False)
+    source_policies = np.random.choice(opt_source_policies, num_opt_sources, replace=False).tolist()
+    source_policies += np.random.choice(subopt_source_policies, num_subopt_sources, replace=False).tolist()
 
-    return source_policies.tolist()
+    return source_policies
 
 
 with open('hyperparams/{}.yml'.format(algo), 'r') as f:
@@ -71,10 +85,12 @@ policy_kwargs = hyperparams['policy_kwargs']
 policy_kwargs['SDW'] = args.SDW
 policy_kwargs['no_bias'] = args.no_bias
 
-exp_prefix = '{}sources-{}sets-'.format(num_sources, args.num_set)
+exp_prefix = '{}sources-{}sets-'.format(num_opt_sources + num_subopt_sources, args.num_set)
+if num_subopt_sources > 0:
+    exp_prefix += '{}subopt-'.format(num_subopt_sources)
 exp_prefix += 'SDW' if args.SDW else 'SIW'
 if args.no_bias:
-    exp_prefix = 'no-bias'
+    exp_prefix += '-no-bias'
 
 for _ in range(args.num_set):
 
@@ -101,5 +117,5 @@ for _ in range(args.num_set):
 
     subprocess.run(train_envs_cmd)
 
-    subprocess.run(['parallel', '-a', '/tmp/out.txt', '--eta', '-j', args.num_jobs, '--load', '90%'])
+    subprocess.run(['parallel', '-a', '/tmp/out.txt', '--eta', '-j', args.num_jobs])
 

@@ -42,6 +42,9 @@ with open('/tmp/out.txt', 'w') as f:
             cmd = 'python train.py --env {} --algo {} --seed {} --log-folder {} --play 1000'.format(
                 env, args.algo, seed, args.log_folder)
 
+            if seed != 1000:
+                cmd += ' --no-tensorboard'
+
             exp_name = args.exp_prefix
             for param, val in params.items():
                 cmd += ' --{} {}'.format(param, val)

@@ -248,6 +248,7 @@ def get_saved_hyperparams(stats_path, norm_reward=False, test_mode=False):
 Result_obj = namedtuple('Result', 'monitor dirname')
 Result_obj.__new__.__defaults__ = (None,) * len(Result_obj._fields)
 
+
 def load_group_results(root_dir_or_dirs, env='', verbose=False, mask=None):
     '''
     load summaries of runs from a list of directories (including subdirectories)
