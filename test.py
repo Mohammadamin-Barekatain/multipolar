@@ -18,13 +18,15 @@ from utils.callbacks import VideoRecorder
 from utils.policies import ALGOS
 
 
-def evaluate_model(model, env, num_test_episodes=100, deterministic=True):
+def evaluate_model(model, env, num_test_episodes, deterministic=True, action_noise=0, observation_noise=0):
     """ returns a np array of length num_test_episodes, specifying the accumulated reward an agent got on the given env.
 
     :param model: (obj) stable_baseline model instance
     :param env: (obj) a Gym Environment instance
     :param num_test_episodes: (int) number of test episodes
     :param deterministic: (bool) weather to sample actions deterministicly (True) or randomly (False) from the policy.
+    :param action_noise: (float) std of Gaussian noise injected to agents actions
+    :param observation_noise: (float) std of Gaussian noise injected to agents observations.
     """
     obs = env.reset()
     n_envs = len(obs)
@@ -33,7 +35,14 @@ def evaluate_model(model, env, num_test_episodes=100, deterministic=True):
 
     while num_test_episodes > len(ep_rewards):
 
+        if observation_noise > 0:
+            obs += np.random.normal(scale=observation_noise, size=(n_envs,)+env.observation_space.shape)
+
         action, _ = model.predict(obs, deterministic=deterministic)
+
+        if action_noise > 0:
+            action += np.random.normal(scale=action_noise, size=(n_envs,)+env.action_space.shape)
+
         # Clip Action to avoid out of bound errors
         if isinstance(env.action_space, gym.spaces.Box):
             action = np.clip(action, env.action_space.low, env.action_space.high)
@@ -52,11 +61,13 @@ def evaluate_model(model, env, num_test_episodes=100, deterministic=True):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Any extra args will be used for modifying environment dynamics')
     parser.add_argument('--trained-agent', help='Path to a pretrained agent', default=None, type=str, required=True)
-
     parser.add_argument('--exp-name', help='experiment name, DO NOT USE _', default=None, type=str, required=True)
     parser.add_argument('--n-envs', help='number of parallel test processes', default=16, type=int)
     parser.add_argument('-nte', '--num-test-episodes', help='number of test episodes', default=100, type=int)
     parser.add_argument('--seed', help='Random generator seed', type=int, default=0)
+    parser.add_argument('--action-noise', help='std of Gaussian noise injected to agent actions', type=float, default=0)
+    parser.add_argument('--observation-noise', help='std of Gaussian noise injected to agents observations',
+                        type=float, default=0)
 
     parser.add_argument('--play', help='Length of the video of the agent performing actions on the env (-1 = disabled)',
                         default=1000, type=int)
@@ -67,7 +78,6 @@ if __name__ == '__main__':
     env_params = parse_unknown_args(env_params)
 
     seed = args.seed
-    exp_name = args.exp_name
     trained_agent_path = args.trained_agent
     deterministic = not args.sample_actions_randomly
 
@@ -130,7 +140,8 @@ if __name__ == '__main__':
         print("environment parameters")
         pprint(env_params)
 
-    ep_rewards = evaluate_model(model, env, args.num_test_episodes, deterministic=deterministic)
+    ep_rewards = evaluate_model(model, env, num_test_episodes=args.num_test_episodes, deterministic=deterministic,
+                                action_noise=args.action_noise, observation_noise=args.observation_noise)
 
     print("mean reward: ", ep_rewards.mean())
     print("std reward: ", ep_rewards.std())
@@ -141,13 +152,17 @@ if __name__ == '__main__':
     results_df = pd.DataFrame(results_df)
 
     # dump as csv file:
-    save_file = '{}/results.csv'.format(save_path)
+    name_postfix = 'acNoise{}_ob{}Noise'.format(args.action_noise, args.observation_noise)
+    # remove . from the name_postfix
+    name_postfix = ''.join(name_postfix.split('.'))
+
+    save_file = '{}/results_{}.csv'.format(save_path, name_postfix)
     results_df.to_csv(save_file, sep=",", index=False)
     print("Saved results to {}".format(save_file))
 
     # save video
     if args.play > 0:
-        name = "agent_{}_env_{}".format(trained_agent_path.split('/')[2].split('_')[1], exp_name)
+        name = "agent_{}_env_{}_{}".format(trained_agent_path.split('/')[2].split('_')[1], exp_name, name_postfix)
         record = VideoRecorder(env_id, save_path, env_hyperparams, params_path, args.play, interval=1, seed=seed,
                                env_params=env_params, deterministic=deterministic, name_prefix=name).callback
         record({'self': model}, None)
