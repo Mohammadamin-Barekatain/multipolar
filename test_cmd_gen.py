@@ -8,6 +8,7 @@ import os
 import numpy as np
 from utils.wrappers import parse_params_ranges
 
+_DISCRETE_ENVS=['Acrobot-v1']
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--num-test-episodes', help='Number of test episodes', type=int, required=True)
@@ -29,6 +30,16 @@ exp_prefix = args.exp_prefix
 assert (not ('_' in exp_prefix)), 'experiment prefix should not include _'
 
 
+def exists(test_dir, ac_noise, ob_noise):
+    name_postfix = 'acNoise{}_obNoise{}'.format(ac_noise, ob_noise)
+    # remove . from the name_postfix
+    name_postfix = ''.join(name_postfix.split('.'))
+
+    file = os.path.join(test_dir, 'results/{}_{}/results_{}.csv'.format(exp_prefix, args.seed, name_postfix))
+
+    return os.path.isfile(file)
+
+
 with open('/tmp/out_test.txt', 'w') as f:
 
     for path in os.listdir(test_dir):
@@ -37,10 +48,13 @@ with open('/tmp/out_test.txt', 'w') as f:
         cmd_base = 'python test.py --trained-agent {} --n-envs {} --seed {} --num-test-episodes {} --exp-name {} '.\
             format(trained_agent, args.n_envs, args.seed, args.num_test_episodes, exp_prefix)
 
-        for ac_noise in args.action_noises:
-            cmd = cmd_base + '--action-noise {}'.format(ac_noise)
-            f.write(cmd + '\n')
+        if path.split('_')[0] not in _DISCRETE_ENVS:
+            for ac_noise in args.action_noises:
+                cmd = cmd_base + '--action-noise {}'.format(ac_noise)
+                if not exists(test_dir + path, ac_noise, '0'):
+                    f.write(cmd + '\n')
 
         for ob_noise in args.observation_noises:
             cmd = cmd_base + '--observation-noise {}'.format(ob_noise)
-            f.write(cmd + '\n')
+            if not exists(test_dir + path, '0', ob_noise):
+                f.write(cmd + '\n')

@@ -39,7 +39,7 @@ with open('/tmp/out.txt', 'w') as f:
 
         for seed in [1000, 2000, 3000]:
 
-            cmd = 'python train.py --env {} --algo {} --seed {} --log-folder {} --play 1000'.format(
+            cmd = 'python train.py --env {} --algo {} --seed {} --log-folder {} --play 1000 --no-tensorboard'.format(
                 env, args.algo, seed, args.log_folder)
 
             if seed != 1000:

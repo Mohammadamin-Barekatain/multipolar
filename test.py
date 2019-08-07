@@ -152,7 +152,7 @@ if __name__ == '__main__':
     results_df = pd.DataFrame(results_df)
 
     # dump as csv file:
-    name_postfix = 'acNoise{}_ob{}Noise'.format(args.action_noise, args.observation_noise)
+    name_postfix = 'acNoise{}_obNoise{}'.format(args.action_noise, args.observation_noise)
     # remove . from the name_postfix
     name_postfix = ''.join(name_postfix.split('.'))
 

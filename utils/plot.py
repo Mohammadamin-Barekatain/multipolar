@@ -51,7 +51,7 @@ def plot_results(allresults, split_fn=plt_util.default_split_fn, group_fn=plt_ut
     xbase: int, regular intervals to put ticks on x axis
     ybase: int, regular intervals to put ticks on y axis
     """
-    seaborn.set(style="darkgrid", font_scale=4)
+    seaborn.set(style="whitegrid", font_scale=4)
     if split_fn is None: split_fn = lambda _ : ''
     if group_fn is None: group_fn = lambda _ : ''
 
