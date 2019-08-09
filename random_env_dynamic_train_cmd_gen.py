@@ -12,7 +12,9 @@ parser.add_argument('--num-samples', help='number of env dynamics samples', type
 parser.add_argument('--algo', help='RL Algorithm', type=str, required=True)
 parser.add_argument('--seed', help='Random generator seed', type=int, default=0)
 parser.add_argument('--env', type=str, help='environment ID',
-                    choices=['RoboschoolHopper-v1', 'LunarLanderContinuous-v2', 'Acrobot-v1'], required=True)
+                    choices=['RoboschoolHopper-v1', 'LunarLanderContinuous-v2', 'Acrobot-v1', 'RoboschoolAnt-v1',
+                             'RoboschoolInvertedPendulumSwingup-v1'],
+                    required=True)
 parser.add_argument('--params-ranges', type=str, nargs='+', default=[], help='ranges of the samples of env dynamics',
                     required=True)
 parser.add_argument('--exp-prefix',  help='(optional) prefix to experiment name, DO NOT USE _', type=str, default='')
