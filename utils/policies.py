@@ -330,8 +330,15 @@ class MlpAggregatePolicy(AggregatePolicy):
                                                  feature_extraction="mlp", **_kwargs)
 
 
+class CustomMlpAggregatePolicy(AggregatePolicy):
+    def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False, **_kwargs):
+        super(CustomMlpAggregatePolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse,
+                                                       layers=[16], feature_extraction="mlp", **_kwargs)
+
+
 register_policy('SACTwoLayerMlpAggregatePolicy', SACTwoLayerMlpAggregatePolicy)
 register_policy('MlpAggregatePolicy', MlpAggregatePolicy)
+register_policy('CustomMlpAggregatePolicy', CustomMlpAggregatePolicy)
 register_policy('CustomSACPolicy', CustomSACPolicy)
 register_policy('CustomDQNPolicy', CustomDQNPolicy)
 register_policy('CustomMlpPolicy', CustomMlpPolicy)

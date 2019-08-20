@@ -13,14 +13,18 @@ from stable_baselines.results_plotter import ts2xy, load_results
 
 
 _OPT_THRESH = {
-    'RoboschoolHopper-v1': 2000,
-    'LunarLanderContinuous-v2': 200,
-    'Acrobot-v1': -100}
+    'RoboschoolHopper-v1': -np.inf,
+    'LunarLanderContinuous-v2': -np.inf,
+    'Acrobot-v1': -np.inf,
+    'RoboschoolAnt-v1': -np.inf,
+    'RoboschoolInvertedPendulumSwingup-v1': -np.inf}
 
 _SUBOPT_THRESH = {
-    'RoboschoolHopper-v1': 1500,
-    'LunarLanderContinuous-v2': 150,
-    'Acrobot-v1': -150}
+    'RoboschoolHopper-v1': np.inf, #1500
+    'LunarLanderContinuous-v2': np.inf, #165
+    'Acrobot-v1': np.inf, #-150
+    'RoboschoolAnt-v1': np.inf, #1500
+    'RoboschoolInvertedPendulumSwingup-v1': np.inf}
 
 
 parser = argparse.ArgumentParser()
@@ -38,7 +42,9 @@ parser.add_argument('--params-ranges', type=str, nargs='+', default=[], help='ra
                     required=True)
 
 parser.add_argument('--env', type=str, help='environment ID',
-                    choices=['RoboschoolHopper-v1', 'LunarLanderContinuous-v2', 'Acrobot-v1'], required=True)
+                    choices=['RoboschoolHopper-v1', 'LunarLanderContinuous-v2', 'Acrobot-v1', 'RoboschoolAnt-v1',
+                             'RoboschoolInvertedPendulumSwingup-v1'],
+                    required=True)
 parser.add_argument('-f', '--log-folder', help='Log folder', type=str, default='logs')
 
 args = parser.parse_args()
