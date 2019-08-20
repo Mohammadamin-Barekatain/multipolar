@@ -23,6 +23,7 @@ from stable_baselines.common import set_global_seeds
 from stable_baselines.common.cmd_util import make_atari_env
 from stable_baselines.common.vec_env import DummyVecEnv, VecNormalize, VecFrameStack, SubprocVecEnv
 from stable_baselines.results_plotter import load_results
+import re
 # Do not remove the unused imports below
 from utils.policies import CustomSACPolicy, CustomDQNPolicy, CustomMlpPolicy
 import roboschool
@@ -341,3 +342,27 @@ def parse_unknown_args(args):
             raise ValueError("Invalid arg: %s" % arg)
 
     return retval
+
+
+def extract_param_val(name):
+    param_val = []
+    for env_param in name.split('-'):
+        if env_param[1:] not in ['IW', 'sources', 'sets', 'ravity']:
+
+            ind = re.search("\d", env_param).start()
+            digit = float(env_param[ind:]) / 100
+
+            if (len(env_param) - ind) == 2:
+                digit *= 10
+
+            if (len(env_param) - ind) == 1:
+                digit *= 100
+
+            if ind == 0:
+                digit *= -1
+
+            param = env_param[:ind] if ind > 0 else 'gravity'
+
+            param_val.append((param, digit))
+
+    return param_val

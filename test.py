@@ -70,7 +70,7 @@ if __name__ == '__main__':
                         type=float, default=0)
 
     parser.add_argument('--play', help='Length of the video of the agent performing actions on the env (-1 = disabled)',
-                        default=1000, type=int)
+                        default=500, type=int)
     parser.add_argument('--sample-actions-randomly', action='store_true', default=False,
                         help='Sample actions randomly from the policy')
 
