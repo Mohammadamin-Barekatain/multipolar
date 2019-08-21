@@ -5,7 +5,7 @@ Acrobot-v1:
   lam: 0.94
   n_envs: 16
   n_steps: 256
-  n_timesteps: 400000.0
+  n_timesteps: 200000.0
   nminibatches: 8
   noptepochs: 4
   normalize: true
@@ -14,10 +14,30 @@ Acrobot-v1:
     SDW: false
     no_bias: false
     source_policy_paths:
-    - logs/ppo2_scratch/Acrobot-v1_LinkLength052-LinkLength064-LinkMass142-LinkMass12-LinkComPos007-LinkComPos019-LinkMoi102_1/Acrobot-v1.pkl
-    - logs/ppo2_scratch/Acrobot-v1_LinkLength042-LinkLength114-LinkMass13-LinkMass106-LinkComPos041-LinkComPos011-LinkMoi112_1/Acrobot-v1.pkl
-    - logs/ppo2_scratch/Acrobot-v1_LinkLength088-LinkLength054-LinkMass066-LinkMass135-LinkComPos01-LinkComPos047-LinkMoi039_1/Acrobot-v1.pkl
-    - logs/ppo2_scratch/Acrobot-v1_LinkLength037-LinkLength038-LinkMass052-LinkMass133-LinkComPos075-LinkComPos083-LinkMoi147_1/Acrobot-v1.pkl
+    - logs/ppo2_scratch/Acrobot-v1_LinkLength068-LinkLength088-LinkMass133-LinkMass112-LinkComPos083-LinkComPos029-LinkMoi124_1/Acrobot-v1.pkl
+    - logs/ppo2_scratch/Acrobot-v1_LinkLength126-LinkLength053-LinkMass144-LinkMass144-LinkComPos076-LinkComPos061-LinkMoi134_1/Acrobot-v1.pkl
+    - logs/ppo2_scratch/Acrobot-v1_LinkLength048-LinkLength07-LinkMass142-LinkMass059-LinkComPos09-LinkComPos083-LinkMoi081_1/Acrobot-v1.pkl
+    - logs/ppo2_scratch/Acrobot-v1_LinkLength099-LinkLength059-LinkMass131-LinkMass089-LinkComPos084-LinkComPos057-LinkMoi135_1/Acrobot-v1.pkl
+CartPole-v1:
+  cliprange: 0.2
+  ent_coef: 0.0
+  gamma: 0.98
+  lam: 0.8
+  learning_rate: 0.001
+  n_envs: 8
+  n_steps: 32
+  n_timesteps: 100000.0
+  nminibatches: 1
+  noptepochs: 20
+  policy: MlpAggregatePolicy
+  policy_kwargs:
+    SDW: false
+    no_bias: false
+    source_policy_paths:
+    - logs/ppo2_scratch/CartPole-v1_masscart1814-masspole389-length106-force656-gravity925_1/CartPole-v1.pkl
+    - logs/ppo2_scratch/CartPole-v1_masscart05-masspole22-length029-force776-gravity776_1/CartPole-v1.pkl
+    - logs/ppo2_scratch/CartPole-v1_masscart637-masspole351-length119-force725-gravity619_1/CartPole-v1.pkl
+    - logs/ppo2_scratch/CartPole-v1_masscart153-masspole342-length141-force975-gravity1317_1/CartPole-v1.pkl
 LunarLanderContinuous-v2:
   ent_coef: 0.01
   gamma: 0.999
@@ -36,6 +56,27 @@ LunarLanderContinuous-v2:
     - logs/sac_scratch/LunarLanderContinuous-v2_13-30_1/LunarLanderContinuous-v2.pkl
     - logs/sac_scratch/LunarLanderContinuous-v2_33-40_1/LunarLanderContinuous-v2.pkl
     - logs/sac_scratch/LunarLanderContinuous-v2_33-30_1/LunarLanderContinuous-v2.pkl
+RoboschoolAnt-v1:
+  cliprange: 0.2
+  ent_coef: 0.0
+  gamma: 0.99
+  lam: 0.95
+  learning_rate: 0.00025
+  n_envs: 8
+  n_steps: 256
+  n_timesteps: 2000000.0
+  nminibatches: 32
+  noptepochs: 10
+  normalize: true
+  policy: CustomMlpAggregatePolicy
+  policy_kwargs:
+    SDW: false
+    no_bias: false
+    source_policy_paths:
+    - logs/ppo2_scratch/RoboschoolAnt-v1_length075-size087-damping351-friction052-armature208_1/RoboschoolAnt-v1.pkl
+    - logs/ppo2_scratch/RoboschoolAnt-v1_length066-size09-damping056-friction16-armature28_1/RoboschoolAnt-v1.pkl
+    - logs/ppo2_scratch/RoboschoolAnt-v1_length112-size09-damping478-friction175-armature141_1/RoboschoolAnt-v1.pkl
+    - logs/ppo2_scratch/RoboschoolAnt-v1_length065-size078-damping263-friction045-armature082_1/RoboschoolAnt-v1.pkl
 RoboschoolHopper-v1:
   cliprange: 0.2
   ent_coef: 0.0
@@ -44,7 +85,7 @@ RoboschoolHopper-v1:
   learning_rate: 0.00025
   n_envs: 8
   n_steps: 2048
-  n_timesteps: 5000000.0
+  n_timesteps: 2000000.0
   nminibatches: 128
   noptepochs: 10
   normalize: true
@@ -53,4 +94,25 @@ RoboschoolHopper-v1:
     SDW: false
     no_bias: false
     source_policy_paths:
-    - logs/ppo2_scratch/RoboschoolHopper-v1_leg038-foot029-thigh037-torso042-size108-damping396-friction111-armature074_1/RoboschoolHopper-v1.pkl
+    - logs/ppo2_scratch/RoboschoolHopper-v1_leg055-foot038-thigh049-torso047-size109-damping349-friction051-armature103_1/RoboschoolHopper-v1.pkl
+RoboschoolInvertedPendulumSwingup-v1:
+  cliprange: 0.2
+  ent_coef: 0.0
+  gamma: 0.99
+  lam: 0.95
+  learning_rate: 0.00025
+  n_envs: 8
+  n_steps: 2048
+  n_timesteps: 2000000.0
+  nminibatches: 32
+  noptepochs: 10
+  normalize: true
+  policy: MlpAggregatePolicy
+  policy_kwargs:
+    SDW: false
+    no_bias: false
+    source_policy_paths:
+    - logs/ppo2/RoboschoolInvertedPendulumSwingup-v1_length057-size15-damping193-friction119-armature119-gravity-865_1/RoboschoolInvertedPendulumSwingup-v1.pkl
+    - logs/ppo2/RoboschoolInvertedPendulumSwingup-v1_length041-size206-damping08-friction191-armature18-gravity-934_1/RoboschoolInvertedPendulumSwingup-v1.pkl
+    - logs/ppo2/RoboschoolInvertedPendulumSwingup-v1_length171-size101-damping256-friction191-armature208-gravity-753_1/RoboschoolInvertedPendulumSwingup-v1.pkl
+    - logs/ppo2/RoboschoolInvertedPendulumSwingup-v1_length149-size265-damping488-friction178-armature052-gravity-956_1/RoboschoolInvertedPendulumSwingup-v1.pkl

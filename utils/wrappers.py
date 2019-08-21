@@ -12,7 +12,7 @@ from ast import literal_eval
 import gym
 import numpy as np
 from gym.envs.box2d import LunarLander, BipedalWalker, CarRacing, BipedalWalkerHardcore
-from gym.envs.classic_control import AcrobotEnv
+from gym.envs.classic_control import AcrobotEnv, CartPoleEnv, MountainCarEnv, PendulumEnv
 from roboschool import RoboschoolHopper, RoboschoolAnt, RoboschoolInvertedPendulumSwingup
 
 
@@ -58,7 +58,9 @@ class ModifyClassicControlEnvParams(gym.Wrapper):
         gym.Wrapper.__init__(self, env)
 
         # find the path to the source code of the environment
-        env_class = env.env.__class__
+        env_class = env.env
+        if isinstance(env.env, AcrobotEnv):
+            env_class = env_class.__class__
 
         for key, val in params.items():
             assert key in vars(env_class), "{} is not a parameter in the env {}".format(key, env_class)
@@ -349,7 +351,8 @@ def modify_env_params(env, params_path=None, verbose=1, **params):
             or isinstance(env.env, CarRacing) or isinstance(env.env, BipedalWalkerHardcore):
         return ModifyBox2DEnvParams(env=env, verbose=verbose, **params)
 
-    elif isinstance(env.env, AcrobotEnv):
+    elif isinstance(env.env, AcrobotEnv) or isinstance(env.env, CartPoleEnv) or isinstance(env.env, PendulumEnv) \
+            or isinstance(env.env, MountainCarEnv):
         return ModifyClassicControlEnvParams(env=env, verbose=verbose, **params)
 
     elif isinstance(env.env, RoboschoolHopper):

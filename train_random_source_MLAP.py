@@ -17,14 +17,16 @@ _OPT_THRESH = {
     'LunarLanderContinuous-v2': -np.inf,
     'Acrobot-v1': -np.inf,
     'RoboschoolAnt-v1': -np.inf,
-    'RoboschoolInvertedPendulumSwingup-v1': -np.inf}
+    'RoboschoolInvertedPendulumSwingup-v1': -np.inf,
+    'CartPole-v1': -np.inf}
 
 _SUBOPT_THRESH = {
     'RoboschoolHopper-v1': np.inf, #1500
     'LunarLanderContinuous-v2': np.inf, #165
     'Acrobot-v1': np.inf, #-150
     'RoboschoolAnt-v1': np.inf, #1500
-    'RoboschoolInvertedPendulumSwingup-v1': np.inf}
+    'RoboschoolInvertedPendulumSwingup-v1': np.inf,
+    'CartPole-v1': np.inf}
 
 
 parser = argparse.ArgumentParser()
@@ -41,10 +43,7 @@ parser.add_argument('--num-subopt-sources', type=int, help='number of sub optima
 parser.add_argument('--params-ranges', type=str, nargs='+', default=[], help='ranges of the samples of env dynamics',
                     required=True)
 
-parser.add_argument('--env', type=str, help='environment ID',
-                    choices=['RoboschoolHopper-v1', 'LunarLanderContinuous-v2', 'Acrobot-v1', 'RoboschoolAnt-v1',
-                             'RoboschoolInvertedPendulumSwingup-v1'],
-                    required=True)
+parser.add_argument('--env', type=str, help='environment ID', choices=_OPT_THRESH.keys(), required=True)
 parser.add_argument('-f', '--log-folder', help='Log folder', type=str, default='logs')
 
 args = parser.parse_args()
