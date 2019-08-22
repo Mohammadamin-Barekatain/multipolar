@@ -1,13 +1,14 @@
-
+---
 LunarLanderContinuous-v2:
-  n_timesteps: !!float 1e6
-  policy:  'SACTwoLayerMlpAggregatePolicy'
   batch_size: 256
   learning_starts: 1000
-  policy_kwargs: {'source_policy_paths': ['logs/sac_scratch/LunarLanderContinuous-v2_13-40_1/LunarLanderContinuous-v2.pkl',
-                                          'logs/sac_scratch/LunarLanderContinuous-v2_13-30_1/LunarLanderContinuous-v2.pkl',
-                                          'logs/sac_scratch/LunarLanderContinuous-v2_33-40_1/LunarLanderContinuous-v2.pkl',
-                                          'logs/sac_scratch/LunarLanderContinuous-v2_33-30_1/LunarLanderContinuous-v2.pkl'],
-                  'SDW': False,
-                  'no_bias': False}
-
+  n_timesteps: 200000.0
+  policy: SACTwoLayerMlpAggregatePolicy
+  policy_kwargs:
+    SDW: false
+    no_bias: false
+    source_policy_paths:
+    - logs/sac_scratch/LunarLanderContinuous-v2_MainEnginePower1626-SideEnginePower074-Scale4132-InitialRandom75329-SideEngineHeight1466-SideEngineAway1044_1/LunarLanderContinuous-v2.pkl
+    - logs/sac_scratch/LunarLanderContinuous-v2_MainEnginePower2853-SideEnginePower051-Scale3368-InitialRandom64814-SideEngineHeight1981-SideEngineAway1278_1/LunarLanderContinuous-v2.pkl
+    - logs/sac_scratch/LunarLanderContinuous-v2_MainEnginePower327-SideEnginePower145-Scale310-InitialRandom66053-SideEngineHeight1796-SideEngineAway1759_1/LunarLanderContinuous-v2.pkl
+    - logs/sac_scratch/LunarLanderContinuous-v2_MainEnginePower2066-SideEnginePower103-Scale254-InitialRandom68523-SideEngineHeight1401-SideEngineAway1729_1/LunarLanderContinuous-v2.pkl

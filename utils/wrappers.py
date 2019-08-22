@@ -12,7 +12,7 @@ from ast import literal_eval
 import gym
 import numpy as np
 from gym.envs.box2d import LunarLander, BipedalWalker, CarRacing, BipedalWalkerHardcore
-from gym.envs.classic_control import AcrobotEnv, CartPoleEnv, MountainCarEnv, PendulumEnv
+from gym.envs.classic_control import AcrobotEnv, CartPoleEnv, MountainCarEnv
 from roboschool import RoboschoolHopper, RoboschoolAnt, RoboschoolInvertedPendulumSwingup
 
 
@@ -62,22 +62,32 @@ class ModifyClassicControlEnvParams(gym.Wrapper):
         if isinstance(env.env, AcrobotEnv):
             env_class = env_class.__class__
 
-        for key, val in params.items():
-            assert key in vars(env_class), "{} is not a parameter in the env {}".format(key, env_class)
-            if 'LINK_COM_POS' not in key:
-                val = float(val)
+        # for CartPoleEnv multiply the env params to the original params
+        if isinstance(env.env, MountainCarEnv):
+            for key, val in params.items():
+                assert key in vars(env_class), "{} is not a parameter in the env {}".format(key, env_class)
+                val = getattr(env_class, key) * float(val)
                 setattr(env_class, key, val)
                 if verbose > 0:
                     print("{} changed to {}".format(key, val))
 
-        for key, val in params.items():
-            val = float(val)
-            if 'LINK_COM_POS' in key:
-                ind = key.split('_')[-1]
-                val = getattr(env_class, 'LINK_LENGTH_{}'.format(ind)) * val
-                setattr(env_class, key, val)
-                if verbose > 0:
-                    print("{} changed to {}".format(key, val))
+        else:
+            for key, val in params.items():
+                assert key in vars(env_class), "{} is not a parameter in the env {}".format(key, env_class)
+                if 'LINK_COM_POS' not in key:
+                    val = float(val)
+                    setattr(env_class, key, val)
+                    if verbose > 0:
+                        print("{} changed to {}".format(key, val))
+
+            for key, val in params.items():
+                val = float(val)
+                if 'LINK_COM_POS' in key:
+                    ind = key.split('_')[-1]
+                    val = getattr(env_class, 'LINK_LENGTH_{}'.format(ind)) * val
+                    setattr(env_class, key, val)
+                    if verbose > 0:
+                        print("{} changed to {}".format(key, val))
 
 
 def _get_string_from_tuple(s):
@@ -351,8 +361,7 @@ def modify_env_params(env, params_path=None, verbose=1, **params):
             or isinstance(env.env, CarRacing) or isinstance(env.env, BipedalWalkerHardcore):
         return ModifyBox2DEnvParams(env=env, verbose=verbose, **params)
 
-    elif isinstance(env.env, AcrobotEnv) or isinstance(env.env, CartPoleEnv) or isinstance(env.env, PendulumEnv) \
-            or isinstance(env.env, MountainCarEnv):
+    elif isinstance(env.env, AcrobotEnv) or isinstance(env.env, CartPoleEnv) or isinstance(env.env, MountainCarEnv):
         return ModifyClassicControlEnvParams(env=env, verbose=verbose, **params)
 
     elif isinstance(env.env, RoboschoolHopper):

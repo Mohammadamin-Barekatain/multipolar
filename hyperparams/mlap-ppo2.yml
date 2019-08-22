@@ -116,3 +116,20 @@ RoboschoolInvertedPendulumSwingup-v1:
     - logs/ppo2/RoboschoolInvertedPendulumSwingup-v1_length041-size206-damping08-friction191-armature18-gravity-934_1/RoboschoolInvertedPendulumSwingup-v1.pkl
     - logs/ppo2/RoboschoolInvertedPendulumSwingup-v1_length171-size101-damping256-friction191-armature208-gravity-753_1/RoboschoolInvertedPendulumSwingup-v1.pkl
     - logs/ppo2/RoboschoolInvertedPendulumSwingup-v1_length149-size265-damping488-friction178-armature052-gravity-956_1/RoboschoolInvertedPendulumSwingup-v1.pkl
+
+
+MountainCar-v0:
+  normalize: true
+  n_envs: 16
+  n_timesteps: !!float 1e6
+  policy: 'MlpPolicy'
+  n_steps: 16
+  nminibatches: 1
+  lam: 0.98
+  gamma: 0.99
+  noptepochs: 4
+  ent_coef: 0.0
+  policy_kwargs:
+    SDW: false
+    no_bias: false
+
