@@ -46,6 +46,9 @@ with open('/tmp/out_test.txt', 'w') as f:
     for path in os.listdir(test_dir):
         trained_agent = '{}/{}.pkl'.format(test_dir + path, path.split('_')[0])
 
+        if not os.path.isfile(trained_agent):
+            continue
+
         cmd_base = 'python test.py --trained-agent {} --n-envs {} --seed {} --num-test-episodes {} --exp-name {} '.\
             format(trained_agent, args.n_envs, args.seed, args.num_test_episodes, exp_prefix)
 
