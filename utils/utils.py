@@ -275,6 +275,11 @@ def load_group_results(root_dir_or_dirs, env='', verbose=False, mask=None):
             if '-proc' in dirname:
                 files[:] = []
                 continue
+
+            if not dirname.split('/')[-1].startswith(env) or \
+                    (mask and (not re.search(mask, dirname))) or dirname.count('/') != 2:
+                continue
+
             monitor_re = re.compile(r'(\d+\.)?(\d+\.)?monitor\.csv')
             if set(['monitor.json']).intersection(files) or \
                any([f for f in files if monitor_re.match(f)]):  # also match monitor files like 0.1.monitor.csv
@@ -284,10 +289,6 @@ def load_group_results(root_dir_or_dirs, env='', verbose=False, mask=None):
                 result = {'dirname': dirname}
 
                 try:
-                    name = dirname.split('/')[-1]
-                    if not name.startswith(env) or (mask and (not re.search(mask, dirname))) or dirname.count('/') != 2:
-                        continue
-
                     data = load_results(dirname)
                     if len(data) < 2:
                         print('empty dir ', dirname)

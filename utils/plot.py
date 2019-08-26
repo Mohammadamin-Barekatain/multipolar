@@ -14,14 +14,14 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as plticker
 
 from collections import defaultdict
-from matplotlib.ticker import FuncFormatter
+from matplotlib.ticker import FuncFormatter, AutoMinorLocator
 from stable_baselines.results_plotter import ts2xy
 from stable_baselines.results_plotter import load_results
 
 
 def plot_results(allresults, split_fn=plt_util.default_split_fn, group_fn=plt_util.defalt_group_fn, xaxis='episodes',
-    average_group=False, shaded_std=True, shaded_err=True, figsize=None, legend_outside=False, resample=0,
-    smooth_step=1.0, title=None, xbase=None, ybase=None):
+    average_group=False, shaded_std=True, shaded_err=True, figsize=None, legend=True, legend_outside=False, resample=0,
+    smooth_step=1.0, title=None, xbase=None, ybase=None, font_scale=1.5, style='white', color_dict=None):
     """
     Plot multiple Results objects
     split_fn: function Result -> hashable, function that converts results objects into keys to split curves into
@@ -39,6 +39,7 @@ def plot_results(allresults, split_fn=plt_util.default_split_fn, group_fn=plt_ut
     shaded_err: bool, if True (default), the shaded region corresponding to error in mean estimate of the group of curves
         (that is, standard deviation divided by square root of number of curves) will be shown
         (only applicable if average_group = True)
+    legend: bool, draw legends
     figsize: tuple or None, size of the resulting figure (including sub-panels). By default, width is 11.7 and height
         is 8.27 times number of sub-panels.
     legend_outside: bool, if True, will place the legend outside of the sub-panels.
@@ -50,8 +51,12 @@ def plot_results(allresults, split_fn=plt_util.default_split_fn, group_fn=plt_ut
     title: str, optional title for the plots
     xbase: int, regular intervals to put ticks on x axis
     ybase: int, regular intervals to put ticks on y axis
+    font_scale: float
+    style: seaborn style
+    color_dict: dictionary specifying the color for each curve.
     """
-    seaborn.set(style="whitegrid", font_scale=4)
+    seaborn.set(style=style, font_scale=font_scale)
+
     if split_fn is None: split_fn = lambda _ : ''
     if group_fn is None: group_fn = lambda _ : ''
 
@@ -91,14 +96,17 @@ def plot_results(allresults, split_fn=plt_util.default_split_fn, group_fn=plt_ut
             else:
                 if resample:
                     x, y, counts = plt_util.symmetric_ema(x, y, x[0], x[-1], resample, decay_steps=smooth_step)
-                l, = ax.plot(x, y, color=plt_util.COLORS[groups.index(group) % len(plt_util.COLORS)])
+                color = plt_util.COLORS[groups.index(group) % len(plt_util.COLORS)] \
+                    if color_dict is None else color_dict[group]
+                l, = ax.plot(x, y, color=color)
                 g2l[group] = l
         if average_group:
             for group in sorted(groups):
                 xys = gresults[group]
                 if not any(xys):
                     continue
-                color = plt_util.COLORS[groups.index(group) % len(plt_util.COLORS)]
+                color = plt_util.COLORS[groups.index(group) % len(plt_util.COLORS)] \
+                    if color_dict is None else color_dict[group]
                 origxs = [xy[0] for xy in xys]
                 minxlen = min(map(len, origxs))
                 def allequal(qs):
@@ -128,18 +136,17 @@ def plot_results(allresults, split_fn=plt_util.default_split_fn, group_fn=plt_ut
 
         # https://matplotlib.org/users/legend_guide.html
         plt.tight_layout()
-        if any(g2l.keys()):
+        if legend and any(g2l.keys()):
             # ax.legend(
             #     g2l.values(),
             #     ['%s (%i)'%(g, g2c[g]) for g in g2l] if average_group else g2l.keys(),
             #     loc=4 if legend_outside else None,
             #     bbox_to_anchor=(1, 1) if legend_outside else None)
             ax.legend(
-                g2l.values(), g2l.keys(), loc=0 if legend_outside else None,
-                bbox_to_anchor=(1, 1) if legend_outside else None)
+                g2l.values(), g2l.keys(), loc=4, bbox_to_anchor=(1, 1) if legend_outside else None)
 
-        ax.set_xlabel(xaxis)
-        ax.set_ylabel('episodic reward')
+        ax.set_xlabel(xaxis.capitalize())
+        ax.set_ylabel('Episodic Reward')
         if title is None:
             ax.set_title(sk)
         else:
@@ -147,9 +154,11 @@ def plot_results(allresults, split_fn=plt_util.default_split_fn, group_fn=plt_ut
         if xbase:
             loc = plticker.MultipleLocator(base=xbase)
             ax.xaxis.set_major_locator(loc)
+            #ax.xaxis.set_minor_locator(AutoMinorLocator(5))
         if ybase:
             loc = plticker.MultipleLocator(base=ybase)
             ax.yaxis.set_major_locator(loc)
+            #ax.yaxis.set_minor_locator(AutoMinorLocator(5))
 
         ax.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
 
