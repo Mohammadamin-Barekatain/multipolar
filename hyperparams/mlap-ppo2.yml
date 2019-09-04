@@ -113,14 +113,10 @@ RoboschoolHopper-v1:
     SDW: false
     no_bias: false
     source_policy_paths:
-    - logs/ppo2_scratch/RoboschoolHopper-v1_leg06-foot038-thigh043-torso036-size105-damping38-friction198-armature106_1/RoboschoolHopper-v1.pkl
-    - logs/ppo2_scratch/RoboschoolHopper-v1_leg064-foot039-thigh04-torso041-size105-damping192-friction132-armature09_1/RoboschoolHopper-v1.pkl
-    - logs/ppo2_scratch/RoboschoolHopper-v1_leg06-foot047-thigh054-torso037-size085-damping101-friction152-armature148_1/RoboschoolHopper-v1.pkl
-    - logs/ppo2_scratch/RoboschoolHopper-v1_leg055-foot038-thigh049-torso047-size109-damping349-friction051-armature103_1/RoboschoolHopper-v1.pkl
-    - logs/ppo2_scratch/RoboschoolHopper-v1_leg045-foot037-thigh048-torso031-size096-damping284-friction081-armature069_1/RoboschoolHopper-v1.pkl
-    - logs/ppo2_scratch/RoboschoolHopper-v1_leg056-foot039-thigh054-torso042-size086-damping262-friction052-armature095_1/RoboschoolHopper-v1.pkl
-    - logs/ppo2_scratch/RoboschoolHopper-v1_leg043-foot036-thigh038-torso045-size072-damping293-friction166-armature166_1/RoboschoolHopper-v1.pkl
-    - logs/ppo2_scratch/RoboschoolHopper-v1_leg04-foot029-thigh045-torso046-size084-damping128-friction062-armature062_1/RoboschoolHopper-v1.pkl
+    - logs/ppo2_scratch/RoboschoolHopper-v1_leg055-foot033-thigh035-torso031-size072-damping367-friction16-armature184_1/RoboschoolHopper-v1.pkl
+    - logs/ppo2_scratch/RoboschoolHopper-v1_leg041-foot031-thigh04-torso031-size072-damping349-friction074-armature133_1/RoboschoolHopper-v1.pkl
+    - logs/ppo2_scratch/RoboschoolHopper-v1_leg053-foot029-thigh035-torso038-size072-damping138-friction083-armature087_1/RoboschoolHopper-v1.pkl
+    - logs/ppo2_scratch/RoboschoolHopper-v1_leg056-foot032-thigh045-torso031-size077-damping056-friction169-armature083_1/RoboschoolHopper-v1.pkl
 RoboschoolInvertedPendulumSwingup-v1:
   cliprange: 0.2
   ent_coef: 0.0
