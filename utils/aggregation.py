@@ -13,11 +13,11 @@ def variable_summaries(var, name_scope='summaries'):
     shape = var.get_shape()
     if len(shape) == 2:
         for i in range(shape[-1]):
-            tf.summary.histogram(name_scope+'_action'+str(i), var[:, i])
+            tf.summary.scalar(name_scope+'_action'+str(i), tf.reduce_mean(var[:, i], axis=0))
     elif len(shape) == 3:
         for i in range(shape[-2]):
             for j in range(shape[-1]):
-                tf.summary.histogram(name_scope+'_source'+str(i)+'_action_'+str(j), var[:, i, j])
+                tf.summary.scalar(name_scope+'_source'+str(i)+'_action_'+str(j), tf.reduce_mean(var[:, i, j], axis=0))
     else:
         raise Exception('full summary is not supported for the shape %s' % shape)
 
@@ -26,8 +26,9 @@ def get_aggregation_var(master_in, name_scope, n_sources, n_actions, no_bias, SD
                         summary=True):
     with tf.name_scope(name_scope):
         if SDW:
-            W = tf.layers.dense(master_in, n_sources * n_actions, activation=None)
-            W = tf.reshape(W, shape=[-1, n_sources, n_actions], name='scale')
+            # W = tf.layers.dense(master_in, n_sources * n_actions, activation=None)
+            # W = tf.reshape(W, shape=[-1, n_sources, n_actions], name='scale')
+            W = tf.ones([1, n_sources, n_actions], name='scale')
         else:
             W = tf.get_variable('scale', shape=[1, n_sources, n_actions],
                                 dtype=tf.float32, trainable=True, initializer=tf.ones_initializer)
@@ -36,7 +37,9 @@ def get_aggregation_var(master_in, name_scope, n_sources, n_actions, no_bias, SD
             b = tf.layers.dense(master_in, n_actions, activation=None,
                                 kernel_initializer=bias_layer_initializer, name='bias')
         else:
-            b = tf.zeros([1, n_actions], name='bias')
+            # b = tf.zeros([1, n_actions], name='bias')
+            b = tf.get_variable(name='bias', shape=[1, n_actions],
+                                dtype=tf.float32, trainable=True, initializer=tf.zeros_initializer())
 
         if summary:
             variable_summaries(W, name_scope='W')
