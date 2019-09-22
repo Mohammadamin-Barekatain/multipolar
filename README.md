@@ -22,7 +22,7 @@ The code has been tested on **Ubuntu 16.04** as well as **macOS Mojave 10.14.06*
 
 ### Prerequisites
 *  python3 (>=3.5)
-*  TensorFlow
+*  TensorFlow (>=1.14.0)
 
 ### Ubuntu
 ```
