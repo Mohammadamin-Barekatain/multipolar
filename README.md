@@ -31,7 +31,7 @@ sudo apt-get update && apt-get install swig cmake libopenmpi-dev zlib1g-dev ffmp
 ### Mac OS X
 
 ```
-brew install cmake openmpi 
+brew install cmake openmpi ffmpeg
 ```
 
 ### Install using pip
