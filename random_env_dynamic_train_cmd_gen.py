@@ -1,4 +1,4 @@
-"""train MLAP agent with some sets of random source polices for OpenAI gym environments
+"""train MULTIPOLAR agent with some sets of random source polices in OpenAI gym environments
 Author: Mohammadamin Barekatain
 Affiliation: TUM & OSX
 """

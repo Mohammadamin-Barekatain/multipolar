@@ -1,4 +1,4 @@
-"""train MLAP agent with some sets of random source polices for OpenAI gym environments
+"""train a MULTIPOLAR agent with some sets of random source polices in OpenAI gym environments
 Author: Mohammadamin Barekatain
 Affiliation: TUM & OSX
 """
@@ -13,7 +13,7 @@ from stable_baselines.results_plotter import ts2xy, load_results
 
 
 _OPT_THRESH = {
-    'RoboschoolHopper-v1': -np.inf,
+    'RoboschoolHopper-v1': -np.inf, #2000
     'LunarLanderContinuous-v2': -np.inf,
     'Acrobot-v1': -np.inf,
     'RoboschoolAnt-v1': -np.inf,
@@ -22,10 +22,10 @@ _OPT_THRESH = {
     'MountainCar-v0': -np.inf}
 
 _SUBOPT_THRESH = {
-    'RoboschoolHopper-v1': np.inf, #1500
-    'LunarLanderContinuous-v2': np.inf, #165
-    'Acrobot-v1': np.inf, #-150
-    'RoboschoolAnt-v1': np.inf, #1500
+    'RoboschoolHopper-v1': np.inf, #1000
+    'LunarLanderContinuous-v2': np.inf,
+    'Acrobot-v1': np.inf,
+    'RoboschoolAnt-v1': np.inf,
     'RoboschoolInvertedPendulumSwingup-v1': np.inf,
     'CartPole-v1': np.inf,
     'MountainCar-v0': np.inf}
@@ -34,10 +34,11 @@ _SUBOPT_THRESH = {
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--num-jobs', help='number of parallel jobs', type=str, default=40)
+parser.add_argument('--num-samples', help='number of env dynamics samples', type=int, default=100)
 parser.add_argument('--sources-dir', help='Directory where source policies are stored', type=str, required=True)
-parser.add_argument('--algo', help='RL Algorithm', type=str, required=True, choices=['mlap-ppo2', 'mlap-sac'])
+parser.add_argument('--algo', help='RL Algorithm', type=str, required=True, choices=['multipolar-ppo2', 'multipolar-sac'])
 parser.add_argument('--num-set', help='Number of sets of source policies to sample randomly', type=int, default=5)
-parser.add_argument('--num-sources', help='Number of source policies used in MLAP', type=int, default=4)
+parser.add_argument('--num-sources', help='Number of source policies used in MULTIPOLAR', type=int, default=4)
 parser.add_argument('--SDW', help='Make master model state dependant', action='store_true', default=False)
 parser.add_argument('--no-bias', help='Do not learn an auxiliary source policy', action='store_true', default=False)
 parser.add_argument('--seed', help='Random generator seed', type=int, default=55)
@@ -111,7 +112,7 @@ for _ in range(args.num_set):
     pprint(hyperparams)
 
     train_envs_cmd = ['python', 'random_env_dynamic_train_cmd_gen.py',
-                     '--num-samples', '100',
+                     '--num-samples', str(args.num_samples),
                      '--algo', algo,
                      '--seed', '0',
                      '--env', env_id,

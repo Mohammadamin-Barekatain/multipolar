@@ -105,7 +105,7 @@ class CategoricalProbabilityDistributionType(ProbabilityDistributionType):
         return tf.int32
 
 
-def make_mlap_proba_dist_type(ac_space, sources_actions, no_bias, SDW, summary):
+def make_multipolar_proba_dist_type(ac_space, sources_actions, no_bias, SDW, summary):
     """
     return an instance of ProbabilityDistributionType for the correct type of action space
 

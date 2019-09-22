@@ -2,7 +2,7 @@
 LunarLanderContinuous-v2:
   batch_size: 256
   learning_starts: 1000
-  n_timesteps: 200000.0
+  n_timesteps: 500000.0
   policy: SACTwoLayerMlpAggregatePolicy
   policy_kwargs:
     SDW: false

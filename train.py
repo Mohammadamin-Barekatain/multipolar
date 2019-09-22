@@ -6,6 +6,8 @@ Small parts of this script has been copied from https://github.com/araffin/rl-ba
 """
 
 import argparse
+import time
+import random
 import difflib
 import os
 from collections import OrderedDict
@@ -53,6 +55,9 @@ parser.add_argument('--checkpoint', help='save checkpoints', action='store_true'
 args, env_params = parser.parse_known_args()
 env_params = parse_unknown_args(env_params)
 params_ranges = args.params_ranges
+
+### Random delay to have successful parallel trainings
+time.sleep(random.random() * 5.0)
 
 ### Sanity check
 assert not (len(params_ranges) > 0 and len(env_params) > 0), \
@@ -201,9 +206,9 @@ if args.save_video_interval > 0:
                              args.save_video_length, interval=args.save_video_interval, env_params=env_params).callback
 
 elif args.checkpoint:
-    if args.algo in ['mlap-ppo2', 'ppo2']:
+    if args.algo in ['multipolar-ppo2', 'ppo2']:
         interval = n_timesteps / hyperparams['n_steps'] / n_envs / 10
-    elif args.algo in ['sac', 'mlap-sac']:
+    elif args.algo in ['sac', 'multipolar-sac']:
         interval = n_timesteps / 10
     else:
         raise NotImplementedError()

@@ -14,7 +14,7 @@ from stable_baselines.sac.policies import FeedForwardPolicy as SACFeedForwardPol
 from stable_baselines.common.policies import FeedForwardPolicy, ActorCriticPolicy, mlp_extractor
 from stable_baselines.sac.policies import mlp, gaussian_likelihood, gaussian_entropy, apply_squashing_func
 from stable_baselines.a2c.utils import linear
-from .distributions import make_mlap_proba_dist_type
+from .distributions import make_multipolar_proba_dist_type
 import warnings
 import gym
 from .aggregation import get_aggregation_var, affine_transformation
@@ -35,8 +35,8 @@ ALGOS = {
     'ddpg': DDPG,
     'sac': SAC,
     'ppo2': PPO2,
-    'mlap-ppo2': PPO2,
-    'mlap-sac': SAC
+    'multipolar-ppo2': PPO2,
+    'multipolar-sac': SAC
 }
 
 
@@ -158,11 +158,11 @@ class AggregatePolicy(ActorCriticPolicy):
             action_dtype = tf.int64
 
         else:
-            raise NotImplementedError("MLAP is not implemented for the required action space")
+            raise NotImplementedError("Multipolar is not implemented for the required action space")
 
         sources_actions = get_sources_actions(self.obs_ph, source_policy_paths, n_batch,
                                               n_actions, ac_space, action_dtype)
-        self.pdtype = make_mlap_proba_dist_type(ac_space, sources_actions, no_bias, SDW, summary=reuse)
+        self.pdtype = make_multipolar_proba_dist_type(ac_space, sources_actions, no_bias, SDW, summary=reuse)
 
         self._kwargs_check(feature_extraction, kwargs)
 

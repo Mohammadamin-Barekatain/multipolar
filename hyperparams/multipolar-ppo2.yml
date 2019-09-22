@@ -14,10 +14,10 @@ Acrobot-v1:
     SDW: false
     no_bias: false
     source_policy_paths:
-    - logs/ppo2_scratch/Acrobot-v1_LinkLength068-LinkLength088-LinkMass133-LinkMass112-LinkComPos083-LinkComPos029-LinkMoi124_1/Acrobot-v1.pkl
-    - logs/ppo2_scratch/Acrobot-v1_LinkLength126-LinkLength053-LinkMass144-LinkMass144-LinkComPos076-LinkComPos061-LinkMoi134_1/Acrobot-v1.pkl
-    - logs/ppo2_scratch/Acrobot-v1_LinkLength048-LinkLength07-LinkMass142-LinkMass059-LinkComPos09-LinkComPos083-LinkMoi081_1/Acrobot-v1.pkl
-    - logs/ppo2_scratch/Acrobot-v1_LinkLength099-LinkLength059-LinkMass131-LinkMass089-LinkComPos084-LinkComPos057-LinkMoi135_1/Acrobot-v1.pkl
+    - logs/ppo2/Acrobot-v1_LinkLength109-LinkLength076-LinkMass128-LinkMass061-LinkComPos062-LinkComPos017-LinkMoi143_1/Acrobot-v1.pkl
+    - logs/ppo2/Acrobot-v1_LinkLength043-LinkLength049-LinkMass086-LinkMass132-LinkComPos013-LinkComPos08-LinkMoi037_1/Acrobot-v1.pkl
+    - logs/ppo2/Acrobot-v1_LinkLength084-LinkLength101-LinkMass11-LinkMass104-LinkComPos043-LinkComPos063-LinkMoi079_1/Acrobot-v1.pkl
+    - logs/ppo2/Acrobot-v1_LinkLength091-LinkLength091-LinkMass111-LinkMass144-LinkComPos066-LinkComPos037-LinkMoi079_1/Acrobot-v1.pkl
 CartPole-v1:
   cliprange: 0.2
   ent_coef: 0.0
@@ -38,24 +38,6 @@ CartPole-v1:
     - logs/ppo2_scratch/CartPole-v1_masscart05-masspole22-length029-force776-gravity776_1/CartPole-v1.pkl
     - logs/ppo2_scratch/CartPole-v1_masscart637-masspole351-length119-force725-gravity619_1/CartPole-v1.pkl
     - logs/ppo2_scratch/CartPole-v1_masscart153-masspole342-length141-force975-gravity1317_1/CartPole-v1.pkl
-LunarLanderContinuous-v2:
-  ent_coef: 0.01
-  gamma: 0.999
-  lam: 0.98
-  n_envs: 16
-  n_steps: 1024
-  n_timesteps: 1000000.0
-  nminibatches: 32
-  noptepochs: 4
-  policy: MlpAggregatePolicy
-  policy_kwargs:
-    SDW: false
-    no_bias: false
-    source_policy_paths:
-    - logs/sac_scratch/LunarLanderContinuous-v2_13-40_1/LunarLanderContinuous-v2.pkl
-    - logs/sac_scratch/LunarLanderContinuous-v2_13-30_1/LunarLanderContinuous-v2.pkl
-    - logs/sac_scratch/LunarLanderContinuous-v2_33-40_1/LunarLanderContinuous-v2.pkl
-    - logs/sac_scratch/LunarLanderContinuous-v2_33-30_1/LunarLanderContinuous-v2.pkl
 MountainCar-v0:
   ent_coef: 0.0
   gamma: 0.99
