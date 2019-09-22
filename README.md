@@ -8,10 +8,7 @@ Under review of ICLR 2020.
 
 # Introduction
 
-This is a tensorflow-based implementation of our submission to ICLR 2020 titled *MULTIPOLAR: Multi-Source Policy Aggregation for Transfer Reinforcement Learning between Diverse Environmental Dynamics*.
-
-Here, we propose MULTIPOLAR, a transfer RL method that leverages a set of source policies collected under unknown 
-diverse environmental dynamics to efficiently learn a target policy in another dynamics.
+This is a TensorFlow-based implementation of our submission to ICLR 2020 titled *MULTIPOLAR: Multi-Source Policy Aggregation for Transfer Reinforcement Learning between Diverse Environmental Dynamics*. Here, we propose MULTIPOLAR, a transfer RL method that leverages a set of source policies collected under unknown diverse environmental dynamics to efficiently learn a target policy in another dynamics.
 
 This repository makes it possible to reproduce all of our experiments presented in the paper.
 
