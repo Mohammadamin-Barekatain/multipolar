@@ -76,7 +76,7 @@ parallel -a /tmp/out.txt --eta -j 3
 ```
 python train_multipolar_random_source.py --num-jobs 3 --sources-dir logs/ppo2/ --env Acrobot-v1 \
 --algo multipolar-ppo2 --num-set 3 --num-sources 4 --num-subopt-sources 0 \
---params-range leg_length,0.35,0.65 foot_length,0.29,0.49 thigh_length,0.35,0.55 torso_length,0.3,0.5 size,0.7,1.1 damping,0.5,4 friction,0.5,2 armature,0.5,2
+--params-ranges LINK_LENGTH_1,0.3,1.3 LINK_LENGTH_2,0.3,1.3 LINK_MASS_1,0.5,1.5 LINK_MASS_2,0.5,1.5 LINK_COM_POS_1,0.05,0.95 LINK_COM_POS_2,0.05,0.95 LINK_MOI,0.25,1.5
 ```
 
 
