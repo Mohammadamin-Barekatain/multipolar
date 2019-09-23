@@ -10,14 +10,10 @@ Under review of ICLR 2020.
 We propose MULTIPOLAR, a transfer RL method that leverages a set of source policies collected under unknown diverse environmental dynamics to efficiently learn an optimal target policy in another dynamics.
 
 #### Source agents (RoboSchool Ants with different leg designs)
-<img src='assets/ant1.gif' width=120>
-<img src='assets/ant2.gif' width=120>
-<img src='assets/ant3.gif' width=120>
-<img src='assets/ant4.gif' width=120>
+<img src='assets/ant1.gif' width=120> <img src='assets/ant2.gif' width=120> <img src='assets/ant3.gif' width=120> <img src='assets/ant4.gif' width=120>
 
 #### Target agent trained with MULTIPOLAR (left) vs trained from scratch (right)
-<img src='assets/multipolar-ant.gif' width=240>
-<img src='assets/MLP-ant.gif' width=240>
+<img src='assets/multipolar-ant.gif' width=240> <img src='assets/MLP-ant.gif' width=240>
 
 # Introduction
 
