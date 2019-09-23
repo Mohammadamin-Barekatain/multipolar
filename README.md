@@ -1,10 +1,8 @@
 # MULTIPOLAR: <br/> Multi-Source Policy Aggregation for Transfer Reinforcement Learning between Diverse Environmental Dynamics
-#### [Mohammadamin Barekatain](http://barekatain.me), [Ryo Yonetani](https://yonetaniryo.github.io), [Masashi Hamaya](https://sites.google.com/view/masashihamaya/home)
 
 Under review of ICLR 2020.
 
 **This repository is only for ICLR reviews, and we do not permit any modifications and redistributions.**
-
 
 # Introduction
 
@@ -14,7 +12,7 @@ Here, we propose MULTIPOLAR, a transfer RL method that leverages a set of source
 
 This repository makes it possible to reproduce all of our experiments presented in the paper.
 
-The code has been tested on **Ubuntu 14.04** as well as **Mac OS Mojave 10.14.06**.
+The code has been tested on **Ubuntu 14.04**, **Ubuntu 16.04** as well as **Mac OS Mojave 10.14.06**.
 
 
 # Installation
