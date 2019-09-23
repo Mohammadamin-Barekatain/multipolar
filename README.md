@@ -1,14 +1,27 @@
 # MULTIPOLAR: <br/> Multi-Source Policy Aggregation for Transfer Reinforcement Learning between Diverse Environmental Dynamics
 
+[Mohammadamin Barekatain](http://barekatain.me), [Ryo Yonetani](https://yonetaniryo.github.io), [Masashi Hamaya](https://sites.google.com/view/masashihamaya/home)
+
 Under review of ICLR 2020.
 
 **This repository is only for ICLR reviews, and we do not permit any modifications and redistributions.**
 
+# TL;DR
+We propose MULTIPOLAR, a transfer RL method that leverages a set of source policies collected under unknown diverse environmental dynamics to efficiently learn an optimal target policy in another dynamics.
+
+#### Source agents (RoboSchool Ants with different leg designs)
+<img src='assets/ant1.gif' width=120>
+<img src='assets/ant2.gif' width=120>
+<img src='assets/ant3.gif' width=120>
+<img src='assets/ant4.gif' width=120>
+
+#### Target agent trained with MULTIPOLAR (left) vs trained from scratch (right)
+<img src='assets/multipolar-ant.gif' width=240>
+<img src='assets/MLP-ant.gif' width=240>
+
 # Introduction
 
 This is a TensorFlow-based implementation of our submission to ICLR 2020 titled *MULTIPOLAR: Multi-Source Policy Aggregation for Transfer Reinforcement Learning between Diverse Environmental Dynamics*. 
-
-Here, we propose MULTIPOLAR, a transfer RL method that leverages a set of source policies collected under unknown diverse environmental dynamics to efficiently learn a target policy in another dynamics.
 
 This repository makes it possible to reproduce all of our experiments presented in the paper.
 
@@ -23,7 +36,7 @@ The code has been tested on **Ubuntu 14.04**, **Ubuntu 16.04** as well as **Mac 
 
 ### Ubuntu
 ```
-sudo apt-get update && apt-get install swig cmake libopenmpi-dev python3-dev zlib1g-dev ffmpeg parallel
+sudo apt-get update && apt-get install ssh swig cmake libopenmpi-dev python3-dev zlib1g-dev ffmpeg parallel libpcre3-dev libsm6 libxext6 libxrender-dev
 ```
 ### Mac OS X
 
@@ -34,8 +47,7 @@ brew install cmake openmpi ffmpeg parallel
 ### Install using pip
 
 ```
-pip install stable-baselines==2.4.0 box2d box2d-kengz pyyaml pybullet==2.1.0
-pip install box2d-py gym==0.10.9 roboschool pytablewriter bootstrapped
+pip install stable-baselines==2.4.0 box2d box2d-kengz pyyaml pybullet==2.1.0 box2d-py gym==0.10.9 roboschool pytablewriter bootstrapped opencv-python
 ```
 
 Make sure that `gym` version is correct: `gym==0.10.9`. 
