@@ -101,7 +101,63 @@ python train_multipolar_random_source.py --num-jobs 3 --sources-dir logs/ppo2/ -
 
 # Training MULTIPOLAR in other environments
 
-Below you can find the commands we used for performing our other experiments.
+Below you can find the commands we used for performing our other experiments in 100 environment instance.
+
+a) **Roboschool Hopper**
+
+```
+python random_env_dynamic_train_cmd_gen.py --num-samples 100 --algo ppo2 --seed 0 --env RoboschoolHopper-v1 \
+--params-ranges leg_length,0.35,0.65 foot_length,0.29,0.49 thigh_length,0.35,0.55 torso_length,0.3,0.5 size,0.7,1.1 damping,0.5,4 friction,0.5,2 armature,0.5,2
+
+parallel -a /tmp/out.txt --eta -j 40
+
+python train_multipolar_random_source.py --num-jobs 40 --sources-dir logs/ppo2/ --env RoboschoolHopper-v1 \
+--algo multipolar-ppo2 --num-set 3 --num-sources 1 --num-subopt-sources 0 \
+--params-range leg_length,0.35,0.65 foot_length,0.29,0.49 thigh_length,0.35,0.55 torso_length,0.3,0.5 size,0.7,1.1 damping,0.5,4 friction,0.5,2 armature,0.5,2
+
+python train_multipolar_random_source.py --num-jobs 40 --sources-dir logs/ppo2/ --env RoboschoolHopper-v1 \
+--algo multipolar-ppo2 --num-set 3 --num-sources 4 --num-subopt-sources 0 \
+--params-range leg_length,0.35,0.65 foot_length,0.29,0.49 thigh_length,0.35,0.55 torso_length,0.3,0.5 size,0.7,1.1 damping,0.5,4 friction,0.5,2 armature,0.5,2
+```
+
+
+b) **Roboschool Ant**
+
+
+```
+python random_env_dynamic_train_cmd_gen.py --num-samples 100 --algo ppo2 --seed 0 --env RoboschoolAnt-v1 \
+--params-range length,0.4,1.4  size,0.7,1.1  damping,0.1,5 friction,0.4,2.5 armature,0.25,3
+
+parallel -a /tmp/out.txt --eta -j 40
+
+python train_multipolar_random_source.py --num-jobs 40 --sources-dir logs/ppo2/ --env RoboschoolAnt-v1 \
+--algo multipolar-ppo2 --num-set 3 --num-sources 1 --num-subopt-sources 0 \
+--params-range length,0.4,1.4  size,0.7,1.1  damping,0.1,5 friction,0.4,2.5 armature,0.25,3
+
+python train_multipolar_random_source.py --num-jobs 40 --sources-dir logs/ppo2/ --env RoboschoolAnt-v1 \
+--algo multipolar-ppo2 --num-set 3 --num-sources 4 --num-subopt-sources 0 \
+--params-range length,0.4,1.4  size,0.7,1.1  damping,0.1,5 friction,0.4,2.5 armature,0.25,3
+```
+
+
+c) **Roboschool InvertedPendulumSwingup**
+
+
+```
+python random_env_dynamic_train_cmd_gen.py --num-samples 100 --algo ppo2 --seed 0 --env RoboschoolInvertedPendulumSwingup-v1 \
+--params-range length,0.2,2  size,0.4,3  damping,0.1,5 friction,0.5,2 armature,0.5,3 gravity,-11,-7
+
+parallel -a /tmp/out.txt --eta -j 40
+
+python train_multipolar_random_source.py --num-jobs 40 --sources-dir logs/ppo2/ --env RoboschoolInvertedPendulumSwingup-v1 \
+--algo multipolar-ppo2 --num-set 3 --num-sources 1 --num-subopt-sources 0 \
+--params-range length,0.2,2  size,0.4,3  damping,0.1,5 friction,0.5,2 armature,0.5,3 gravity,-11,-7
+
+python train_multipolar_random_source.py --num-jobs 40 --sources-dir logs/ppo2/ --env RoboschoolInvertedPendulumSwingup-v1 \
+--algo multipolar-ppo2 --num-set 3 --num-sources 4 --num-subopt-sources 0 \
+--params-range length,0.2,2  size,0.4,3  damping,0.1,5 friction,0.5,2 armature,0.5,3 gravity,-11,-7
+```
+
 
 
 
