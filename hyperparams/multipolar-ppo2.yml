@@ -38,25 +38,6 @@ CartPole-v1:
     - logs/ppo2_scratch/CartPole-v1_masscart05-masspole22-length029-force776-gravity776_1/CartPole-v1.pkl
     - logs/ppo2_scratch/CartPole-v1_masscart637-masspole351-length119-force725-gravity619_1/CartPole-v1.pkl
     - logs/ppo2_scratch/CartPole-v1_masscart153-masspole342-length141-force975-gravity1317_1/CartPole-v1.pkl
-MountainCar-v0:
-  ent_coef: 0.0
-  gamma: 0.99
-  lam: 0.98
-  n_envs: 16
-  n_steps: 16
-  n_timesteps: 1000000.0
-  nminibatches: 1
-  noptepochs: 4
-  normalize: true
-  policy: MlpAggregatePolicy
-  policy_kwargs:
-    SDW: false
-    no_bias: false
-    source_policy_paths:
-    - logs/ppo2_scratch/MountainCar-v0_force104-gravity087-max163_1/MountainCar-v0.pkl
-    - logs/ppo2_scratch/MountainCar-v0_force08-gravity161-max112_1/MountainCar-v0.pkl
-    - logs/ppo2_scratch/MountainCar-v0_force127-gravity135-max173_1/MountainCar-v0.pkl
-    - logs/ppo2_scratch/MountainCar-v0_force095-gravity082-max171_1/MountainCar-v0.pkl
 RoboschoolAnt-v1:
   cliprange: 0.2
   ent_coef: 0.0

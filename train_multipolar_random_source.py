@@ -18,8 +18,7 @@ _OPT_THRESH = {
     'Acrobot-v1': -np.inf,
     'RoboschoolAnt-v1': -np.inf,
     'RoboschoolInvertedPendulumSwingup-v1': -np.inf,
-    'CartPole-v1': -np.inf,
-    'MountainCar-v0': -np.inf}
+    'CartPole-v1': -np.inf}
 
 _SUBOPT_THRESH = {
     'RoboschoolHopper-v1': np.inf, #1000
@@ -27,8 +26,7 @@ _SUBOPT_THRESH = {
     'Acrobot-v1': np.inf,
     'RoboschoolAnt-v1': np.inf,
     'RoboschoolInvertedPendulumSwingup-v1': np.inf,
-    'CartPole-v1': np.inf,
-    'MountainCar-v0': np.inf}
+    'CartPole-v1': np.inf}
 
 
 parser = argparse.ArgumentParser()
