@@ -179,7 +179,7 @@ python train_multipolar_random_source.py --num-jobs 40 --sources-dir logs/ppo2/ 
 ```
 
 
-d) **LunarLanderContinuous**
+e) **LunarLanderContinuous**
 
 
 ```
