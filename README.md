@@ -160,4 +160,40 @@ python train_multipolar_random_source.py --num-jobs 40 --sources-dir logs/ppo2/ 
 
 
 
+d) **CartPole**
+
+
+```
+python random_env_dynamic_train_cmd_gen.py --num-samples 100 --algo ppo2 --seed 0 --env CartPole-v1 \
+--params-range masscart,0.2,20 masspole,0.1,5 length,0.1,3 force_mag,6,13 gravity,6,14
+
+parallel -a /tmp/out.txt --eta -j 40
+
+python train_multipolar_random_source.py --num-jobs 40 --sources-dir logs/ppo2/ --env CartPole-v1 \
+--algo multipolar-ppo2 --num-set 3 --num-sources 1 --num-subopt-sources 0 \
+--params-range masscart,0.2,20 masspole,0.1,5 length,0.1,3 force_mag,6,13 gravity,6,14
+
+python train_multipolar_random_source.py --num-jobs 40 --sources-dir logs/ppo2/ --env CartPole-v1 \
+--algo multipolar-ppo2 --num-set 3 --num-sources 4 --num-subopt-sources 0 \
+--params-range masscart,0.2,20 masspole,0.1,5 length,0.1,3 force_mag,6,13 gravity,6,14
+```
+
+
+d) **LunarLanderContinuous**
+
+
+```
+python random_env_dynamic_train_cmd_gen.py --num-samples 100 --algo sac --seed 0 --env LunarLanderContinuous-v2 \
+--params-ranges MAIN_ENGINE_POWER,10,40 SIDE_ENGINE_POWER,0.5,2 SCALE,25,50 INITIAL_RANDOM,500,1500 SIDE_ENGINE_HEIGHT,10,20 SIDE_ENGINE_AWAY,8,18 --num-subopt-sources 0
+
+parallel -a /tmp/out.txt --eta -j 40
+
+python train_multipolar_random_source.py --num-jobs 40 --sources-dir logs/sac/ --env LunarLanderContinuous-v2 \
+--algo multipolar-sac --num-set 3 --num-sources 1 --num-subopt-sources 0 \
+--params-ranges MAIN_ENGINE_POWER,10,40 SIDE_ENGINE_POWER,0.5,2 SCALE,25,50 INITIAL_RANDOM,500,1500 SIDE_ENGINE_HEIGHT,10,20 SIDE_ENGINE_AWAY,8,18 --num-subopt-sources 0
+
+python train_multipolar_random_source.py --num-jobs 40 --sources-dir logs/sac/ --env LunarLanderContinuous-v2 \
+--algo multipolar-sac --num-set 3 --num-sources 4 --num-subopt-sources 0 \
+--params-ranges MAIN_ENGINE_POWER,10,40 SIDE_ENGINE_POWER,0.5,2 SCALE,25,50 INITIAL_RANDOM,500,1500 SIDE_ENGINE_HEIGHT,10,20 SIDE_ENGINE_AWAY,8,18 --num-subopt-sources 0
+```
 
