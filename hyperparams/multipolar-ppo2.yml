@@ -14,10 +14,7 @@ Acrobot-v1:
     SDW: false
     no_bias: false
     source_policy_paths:
-    - logs/ppo2/Acrobot-v1_LinkLength109-LinkLength076-LinkMass128-LinkMass061-LinkComPos062-LinkComPos017-LinkMoi143_1/Acrobot-v1.pkl
-    - logs/ppo2/Acrobot-v1_LinkLength043-LinkLength049-LinkMass086-LinkMass132-LinkComPos013-LinkComPos08-LinkMoi037_1/Acrobot-v1.pkl
     - logs/ppo2/Acrobot-v1_LinkLength084-LinkLength101-LinkMass11-LinkMass104-LinkComPos043-LinkComPos063-LinkMoi079_1/Acrobot-v1.pkl
-    - logs/ppo2/Acrobot-v1_LinkLength091-LinkLength091-LinkMass111-LinkMass144-LinkComPos066-LinkComPos037-LinkMoi079_1/Acrobot-v1.pkl
 CartPole-v1:
   cliprange: 0.2
   ent_coef: 0.0
