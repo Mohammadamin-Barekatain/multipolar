@@ -1,7 +1,5 @@
 # MULTIPOLAR: <br/> Multi-Source Policy Aggregation for Transfer Reinforcement Learning between Diverse Environmental Dynamics
 
-[Mohammadamin Barekatain](http://barekatain.me), [Ryo Yonetani](https://yonetaniryo.github.io), [Masashi Hamaya](https://sites.google.com/view/masashihamaya/home)
-
 Under review of ICLR 2020.
 
 **This repository is only for ICLR reviews, and we do not permit any modifications and redistributions.**
@@ -196,4 +194,12 @@ python train_multipolar_random_source.py --num-jobs 40 --sources-dir logs/sac/ -
 --algo multipolar-sac --num-set 3 --num-sources 4 --num-subopt-sources 0 \
 --params-ranges MAIN_ENGINE_POWER,10,40 SIDE_ENGINE_POWER,0.5,2 SCALE,25,50 INITIAL_RANDOM,500,1500 SIDE_ENGINE_HEIGHT,10,20 SIDE_ENGINE_AWAY,8,18 --num-subopt-sources 0
 ```
+
+# Ablation Study of MULTIPOLAR
+
+There exist two degraded versions of MULTIPOLAR, which is explained in Section 4.2 of the paper.
+
+1. *aggregation parameters fixed to 1*: repeat the training commands with an extra flag `--SIW=False`
+
+2. *auxiliary network learned independent of the states*: repeat the training commands with an extra flag `--no-bias=True`
 
