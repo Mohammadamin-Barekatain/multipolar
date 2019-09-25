@@ -199,7 +199,7 @@ python train_multipolar_random_source.py --num-jobs 40 --sources-dir logs/sac/ -
 
 There exist two degraded versions of MULTIPOLAR, which is explained in Section 4.2 of the paper.
 
-1. *aggregation parameters fixed to 1*: repeat the training commands with an extra flag `--SIW=False`
+1. *aggregation parameters fixed to 1*: repeat the training commands with an extra flag `--SIW False`
 
-2. *auxiliary network learned independent of the states*: repeat the training commands with an extra flag `--no-bias=True`
+2. *auxiliary network learned independent of the states*: repeat the training commands with an extra flag `--no-bias True`
 
