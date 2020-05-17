@@ -7,7 +7,7 @@ This is the original repository for the following paper:
 
 
 # TL;DR
-We propose MULTIPOLAR, a transfer RL method that leverages a set of source policies collected under unknown diverse environmental dynamics to efficiently learn an optimal target policy in another dynamics. [Video of a five-minute presentation](https://youtu.be/JE5aeTqwo6o)
+We propose MULTIPOLAR, a transfer RL method that leverages a set of source policies collected under unknown diverse environmental dynamics to efficiently learn an optimal target policy in another dynamics. [Video of a five-minute presentation of this work.](https://youtu.be/JE5aeTqwo6o)
 
 #### Source agents (Roboschool Ants with different leg designs)
 <img src='assets/ant1.gif' width=120> <img src='assets/ant2.gif' width=120> <img src='assets/ant3.gif' width=120> <img src='assets/ant4.gif' width=120>
