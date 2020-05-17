@@ -2,7 +2,7 @@
 
 This is the original repository for the following paper: 
 
-[Mohammadamin Barekatain](http://barekatain.me), [Ryo Yonetani](https://yonetaniryo.github.io), [Masashi Hamaya](https://sites.google.com/view/masashihamaya/home). [*MULTIPOLAR: Multi-Source Policy Aggregation for Transfer Reinforcement Learning between Diverse Environmental Dynamics*](https://arxiv.org/pdf/1909.13111.pdf). IJCAI 2020. 
+[Mohammadamin Barekatain](http://barekatain.me), [Ryo Yonetani](https://yonetaniryo.github.io), [Masashi Hamaya](https://sites.google.com/view/masashihamaya/home). [*MULTIPOLAR: Multi-Source Policy Aggregation for Transfer Reinforcement Learning between Diverse Environmental Dynamics*](https://arxiv.org/pdf/1909.13111.pdf). To apprear in IJCAI 2020. 
 
 
 
@@ -24,7 +24,7 @@ This is a TensorFlow-based implementation to reproduce all of our experiments pr
 
 ### Prerequisites
 *  python3 (>=3.5) with the development headers.
-*  TensorFlow (>=1.14.0)
+*  TensorFlow (=1.14.0)
 
 ### Ubuntu
 ```
@@ -39,7 +39,7 @@ brew install cmake openmpi ffmpeg parallel
 ### Install using pip
 
 ```
-pip install stable-baselines==2.4.0 box2d box2d-kengz pyyaml pybullet==2.1.0 box2d-py gym==0.10.9 roboschool pytablewriter bootstrapped opencv-python
+pip install stable-baselines==2.4.0 box2d box2d-kengz pyyaml pybullet==2.1.0 box2d-py gym==0.10.9 roboschool==1.0.46 pytablewriter bootstrapped opencv-python PyYAML==5.1.2
 ```
 
 Make sure that `gym` version is correct: `gym==0.10.9`. 
@@ -180,17 +180,17 @@ e) **LunarLanderContinuous**
 
 ```
 python random_env_dynamic_train_cmd_gen.py --num-samples 100 --algo sac --seed 0 --env LunarLanderContinuous-v2 \
---params-ranges MAIN_ENGINE_POWER,10,40 SIDE_ENGINE_POWER,0.5,2 SCALE,25,50 INITIAL_RANDOM,500,1500 SIDE_ENGINE_HEIGHT,10,20 SIDE_ENGINE_AWAY,8,18 --num-subopt-sources 0
+--params-ranges MAIN_ENGINE_POWER,10,40 SIDE_ENGINE_POWER,0.5,2 SCALE,25,50 INITIAL_RANDOM,500,1500 SIDE_ENGINE_HEIGHT,10,20 SIDE_ENGINE_AWAY,8,18
 
 parallel -a /tmp/out.txt --eta -j 40
 
 python train_multipolar_random_source.py --num-jobs 40 --sources-dir logs/sac/ --env LunarLanderContinuous-v2 \
 --algo multipolar-sac --num-set 3 --num-sources 1 --num-subopt-sources 0 \
---params-ranges MAIN_ENGINE_POWER,10,40 SIDE_ENGINE_POWER,0.5,2 SCALE,25,50 INITIAL_RANDOM,500,1500 SIDE_ENGINE_HEIGHT,10,20 SIDE_ENGINE_AWAY,8,18 --num-subopt-sources 0
+--params-ranges MAIN_ENGINE_POWER,10,40 SIDE_ENGINE_POWER,0.5,2 SCALE,25,50 INITIAL_RANDOM,500,1500 SIDE_ENGINE_HEIGHT,10,20 SIDE_ENGINE_AWAY,8,18
 
 python train_multipolar_random_source.py --num-jobs 40 --sources-dir logs/sac/ --env LunarLanderContinuous-v2 \
 --algo multipolar-sac --num-set 3 --num-sources 4 --num-subopt-sources 0 \
---params-ranges MAIN_ENGINE_POWER,10,40 SIDE_ENGINE_POWER,0.5,2 SCALE,25,50 INITIAL_RANDOM,500,1500 SIDE_ENGINE_HEIGHT,10,20 SIDE_ENGINE_AWAY,8,18 --num-subopt-sources 0
+--params-ranges MAIN_ENGINE_POWER,10,40 SIDE_ENGINE_POWER,0.5,2 SCALE,25,50 INITIAL_RANDOM,500,1500 SIDE_ENGINE_HEIGHT,10,20 SIDE_ENGINE_AWAY,8,18
 ```
 
 # Ablation Study of MULTIPOLAR
