@@ -44,7 +44,7 @@ pip install stable-baselines==2.4.0 box2d box2d-kengz pyyaml pybullet==2.1.0 box
 
 Make sure that `gym` version is correct: `gym==0.10.9`. 
 Please see [Stable Baselines README](https://github.com/hill-a/stable-baselines) 
-and [Rl baseline zoo](https://github.com/araffin/rl-baselines-zoo) for alternative installations.
+and [RL Baseline Zoo](https://github.com/araffin/rl-baselines-zoo) for alternative installations.
 
 If you're using Mac OS and have problem installing `pybullet`, use the following:
 
