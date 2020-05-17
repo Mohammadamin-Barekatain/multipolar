@@ -2,7 +2,7 @@
 
 This is the original repository for the following paper: 
 
-[Mohammadamin Barekatain](http://barekatain.me), [Ryo Yonetani](https://yonetaniryo.github.io), [Masashi Hamaya](https://sites.google.com/view/masashihamaya/home). [*MULTIPOLAR: Multi-Source Policy Aggregation for Transfer Reinforcement Learning between Diverse Environmental Dynamics*](https://arxiv.org/pdf/1909.13111.pdf). To apprear in IJCAI 2020. 
+[Mohammadamin Barekatain](http://barekatain.me), [Ryo Yonetani](https://yonetaniryo.github.io), [Masashi Hamaya](https://sites.google.com/view/masashihamaya/home). "[*MULTIPOLAR: Multi-Source Policy Aggregation for Transfer Reinforcement Learning between Diverse Environmental Dynamics*](https://arxiv.org/pdf/1909.13111.pdf)". To apprear in IJCAI 2020. 
 
 
 
