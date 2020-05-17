@@ -73,7 +73,7 @@ python random_env_dynamic_train_cmd_gen.py --num-samples 10 --algo ppo2 --seed 0
 parallel -a /tmp/out.txt --eta -j 3
 ```
 
-We also use these trained MLPs as a pool of source policy candidates from which we sample to train MULTIPOLAR policies. Using the `Source_histogram.ipynb` notebook, it's possible to visualize the histogram of final episodic reward (average rewards of the last 100 training episodes) for these candidates similar to the Figure 5 of the paper.
+We also use these trained MLPs as a pool of source policy candidates from which we sample to train MULTIPOLAR policies. Using the `Source_histogram.ipynb` notebook, it's possible to visualize the histogram of final episodic reward (average rewards of the last 100 training episodes) for these candidates similar to the Figure 4 in the paper.
 
 2. For each environment instance, train 3 MULTIPOLAR policies with distinct sets of source policies of size 4 selected randomly from the pool of source policy candidates.
 
@@ -83,7 +83,7 @@ python train_multipolar_random_source.py --num-jobs 3 --sources-dir logs/ppo2/ -
 --params-ranges LINK_LENGTH_1,0.3,1.3 LINK_LENGTH_2,0.3,1.3 LINK_MASS_1,0.5,1.5 LINK_MASS_2,0.5,1.5 LINK_COM_POS_1,0.05,0.95 LINK_COM_POS_2,0.05,0.95 LINK_MOI,0.25,1.5
 ```
 
-3. Repeat *step 2* with one source policy as another baseline policy.
+3. Repeat *step 2* with one source policy as `RPL` baseline policy.
 
 ```
 python train_multipolar_random_source.py --num-jobs 3 --sources-dir logs/ppo2/ --env Acrobot-v1 \
@@ -91,9 +91,9 @@ python train_multipolar_random_source.py --num-jobs 3 --sources-dir logs/ppo2/ -
 --params-ranges LINK_LENGTH_1,0.3,1.3 LINK_LENGTH_2,0.3,1.3 LINK_MASS_1,0.5,1.5 LINK_MASS_2,0.5,1.5 LINK_COM_POS_1,0.05,0.95 LINK_COM_POS_2,0.05,0.95 LINK_MOI,0.25,1.5
 ```
 
-4. Using `Sampling_efficiency.ipynb`, compare the sample efficiency of MULTIPOLAR(K=4) to the baselines similar to Table 1 of the paper.
+4. Using `Sampling_efficiency.ipynb`, compare the sample efficiency of MULTIPOLAR(K=4) to the baselines similar to Table 7 in the paper.
 
-5. Using `plot_learning_curves.ipynb`, plot the learning curves similar to Figure 3 of the paper.
+5. Using `plot_learning_curves.ipynb`, plot the learning curves similar to Figure 3 in the paper.
 
 # Training MULTIPOLAR in other environments
 
