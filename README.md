@@ -1,8 +1,10 @@
-# MULTIPOLAR: <br/> Multi-Source Policy Aggregation for Transfer Reinforcement Learning between Diverse Environmental Dynamics
+# MULTIPOLAR: <br/> Multi-Source Policy Aggregation for Transfer Reinforcement Learning between Diverse Environmental Dynamics (IJCAI 2020)
 
-Under review of ICLR 2020.
+This is the original repository for the following paper: 
 
-**This repository is only for ICLR reviews, and we do not permit any modifications and redistributions.**
+[Mohammadamin Barekatain](http://barekatain.me), [Ryo Yonetani](https://yonetaniryo.github.io), [Masashi Hamaya](https://sites.google.com/view/masashihamaya/home). [*MULTIPOLAR: Multi-Source Policy Aggregation for Transfer Reinforcement Learning between Diverse Environmental Dynamics*](https://arxiv.org/pdf/1909.13111.pdf). IJCAI 2020. 
+
+
 
 # TL;DR
 We propose MULTIPOLAR, a transfer RL method that leverages a set of source policies collected under unknown diverse environmental dynamics to efficiently learn an optimal target policy in another dynamics.
@@ -13,13 +15,9 @@ We propose MULTIPOLAR, a transfer RL method that leverages a set of source polic
 #### Target agent trained with MULTIPOLAR (left) vs. trained from scratch (right)
 <img src='assets/multipolar-ant.gif' width=240> <img src='assets/MLP-ant.gif' width=240>
 
-# Introduction
+# Getting Started
 
-This is a TensorFlow-based implementation of our submission to ICLR 2020 titled *MULTIPOLAR: Multi-Source Policy Aggregation for Transfer Reinforcement Learning between Diverse Environmental Dynamics*. 
-
-This repository makes it possible to reproduce all of our experiments presented in the paper.
-
-The code has been tested on **Ubuntu 16.04** as well as **Mac OS Mojave 10.14.06**.
+This is a TensorFlow-based implementation to reproduce all of our experiments presented in the paper. All subsequent commands in this README should be run from the top-level directory of this repository. The code has been tested on **Ubuntu 16.04** as well as **Mac OS Mojave 10.14.06**.
 
 
 # Installation
