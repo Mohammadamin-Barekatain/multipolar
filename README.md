@@ -39,7 +39,7 @@ brew install cmake openmpi ffmpeg parallel
 ### Install using pip
 
 ```
-pip install stable-baselines==2.4.0 box2d box2d-kengz pyyaml pybullet==2.1.0 box2d-py gym==0.10.9 roboschool==1.0.46 pytablewriter bootstrapped opencv-python PyYAML==5.1.2
+pip install stable-baselines==2.4.0 box2d box2d-kengz pyyaml==5.1.2 pybullet==2.1.0 box2d-py gym==0.10.9 roboschool==1.0.46 pytablewriter bootstrapped opencv-python
 ```
 
 Make sure that `gym` version is correct: `gym==0.10.9`. 
