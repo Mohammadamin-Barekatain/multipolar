@@ -201,3 +201,5 @@ There exist two degraded versions of MULTIPOLAR, which is explained in Section 4
 
 2. *auxiliary network learned independent of the states*: repeat the training commands with an extra flag `--no-bias True`
 
+
+## If you wish to make commercial use of any part of this source code, please contact us at contact@sinicx.com.
